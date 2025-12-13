@@ -1,0 +1,9 @@
+# robots.txt for Goldman and Co
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://goldmanandco.com/sitemap.xml
+
+# Disallow admin/api routes
+Disallow: /api/
