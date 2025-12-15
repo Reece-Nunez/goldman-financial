@@ -483,7 +483,7 @@ export default function Home() {
               </p>
               <div className="space-y-6">
                 {[
-                  { icon: PhoneIcon, title: "Phone", content: "+1 (888) 959-0332", href: "tel:+18889590332" },
+                  { icon: PhoneIcon, title: "Phone", content: "+1 (800) 697-1887", href: "tel:+18006971887" },
                   { icon: EnvelopeIcon, title: "Email", content: "info@goldmanandco.com", href: "mailto:info@goldmanandco.com" },
                 ].map((item, index) => (
                   <motion.div
@@ -577,7 +577,7 @@ export default function Home() {
               </p>
               <div className="flex items-center gap-2">
                 <PhoneIcon className="w-4 h-4 text-[#b8860b]" />
-                <a href="tel:+18889590332" className="text-gray-400 text-sm hover:text-white transition-colors">+1 (888) 959-0332</a>
+                <a href="tel:+18006971887" className="text-gray-400 text-sm hover:text-white transition-colors">+1 (800) 697-1887</a>
               </div>
             </FadeInUp>
             <FadeInUp delay={0.1}>

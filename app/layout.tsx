@@ -101,7 +101,7 @@ const jsonLd = {
   url: "https://goldmanandco.com",
   logo: "https://goldmanandco.com/Final Files-01.png",
   image: "https://goldmanandco.com/og-image.jpg",
-  telephone: "+1-888-959-0332",
+  telephone: "+1-800-697-1887",
   email: "info@goldmanandco.com",
   address: [
     {
@@ -142,7 +142,7 @@ const organizationJsonLd = {
     "Private capital and investment firm providing growth capital, structured investments, and strategic guidance to established businesses.",
   contactPoint: {
     "@type": "ContactPoint",
-    telephone: "+1-888-959-0332",
+    telephone: "+1-800-697-1887",
     contactType: "customer service",
     email: "info@goldmanandco.com",
     availableLanguage: "English",
