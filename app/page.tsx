@@ -27,6 +27,7 @@ import {
   StaggerContainer,
   StaggerItem,
   HoverCard,
+  AnimatedCounter,
 } from "./components/animations";
 
 export default function Home() {
@@ -58,10 +59,10 @@ export default function Home() {
             </motion.div>
             <div className="hidden md:flex items-center gap-8">
               {[
-                { href: "#about", label: "About" },
-                { href: "#philosophy", label: "Philosophy" },
-                { href: "#services", label: "Services" },
-                { href: "#partners", label: "Partners" },
+                { href: "/the-goldman-difference", label: "About" },
+                { href: "/investment-strategy", label: "Investment Strategy" },
+                { href: "/capital-solutions", label: "Capital Solutions" },
+                { href: "/who-we-partner-with", label: "Who We Partner With" },
               ].map((link, i) => (
                 <motion.a
                   key={link.href}
@@ -75,7 +76,7 @@ export default function Home() {
                 </motion.a>
               ))}
               <motion.a
-                href="#contact"
+                href="/confidential-review"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
@@ -200,10 +201,10 @@ export default function Home() {
               >
                 <div className="grid grid-cols-2 gap-8">
                   {[
-                    { value: "1,000+", label: "Businesses Served" },
-                    { value: "$70M+", label: "Capital Deployed" },
-                    { value: "95%", label: "Client Satisfaction" },
-                    { value: "2", label: "Office Locations" },
+                    { value: 1000, suffix: "+", label: "Businesses Served" },
+                    { value: 70, prefix: "$", suffix: "M+", label: "Capital Deployed" },
+                    { value: 95, suffix: "%", label: "Client Satisfaction" },
+                    { value: 2, suffix: "", label: "Office Locations" },
                   ].map((stat, i) => (
                     <motion.div
                       key={stat.label}
@@ -213,7 +214,14 @@ export default function Home() {
                       transition={{ delay: 0.2 + i * 0.1, duration: 0.5 }}
                       className="text-center"
                     >
-                      <div className="text-4xl lg:text-5xl font-serif text-[#d4a944] mb-2">{stat.value}</div>
+                      <div className="text-4xl lg:text-5xl font-serif text-[#d4a944] mb-2">
+                        <AnimatedCounter
+                          value={stat.value}
+                          prefix={stat.prefix || ""}
+                          suffix={stat.suffix}
+                          duration={2}
+                        />
+                      </div>
                       <p className="text-gray-300 text-sm">{stat.label}</p>
                     </motion.div>
                   ))}
@@ -584,11 +592,12 @@ export default function Home() {
               <h4 className="text-white font-semibold mb-6">Quick Links</h4>
               <ul className="space-y-3">
                 {[
-                  { href: "#about", label: "About Us" },
-                  { href: "#philosophy", label: "Investment Philosophy" },
-                  { href: "#services", label: "Our Services" },
-                  { href: "#partners", label: "Who We Partner With" },
-                  { href: "#contact", label: "Contact" },
+                  { href: "/the-goldman-difference", label: "About Us" },
+                  { href: "/investment-strategy", label: "Investment Strategy" },
+                  { href: "/capital-solutions", label: "Capital Solutions" },
+                  { href: "/value-creation", label: "Value Creation" },
+                  { href: "/who-we-partner-with", label: "Who We Partner With" },
+                  { href: "/confidential-review", label: "Contact" },
                 ].map((link) => (
                   <li key={link.href}>
                     <motion.a

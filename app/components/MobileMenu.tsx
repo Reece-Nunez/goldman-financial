@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const navLinks = [
-  { href: '#about', label: 'About' },
-  { href: '#philosophy', label: 'Philosophy' },
-  { href: '#services', label: 'Services' },
-  { href: '#partners', label: 'Partners' },
-  { href: '#contact', label: 'Contact' },
+  { href: '/the-goldman-difference', label: 'About' },
+  { href: '/investment-strategy', label: 'Investment Strategy' },
+  { href: '/capital-solutions', label: 'Capital Solutions' },
+  { href: '/value-creation', label: 'Value Creation' },
+  { href: '/who-we-partner-with', label: 'Who We Partner With' },
 ];
 
 export default function MobileMenu() {
@@ -42,7 +42,7 @@ export default function MobileMenu() {
               </a>
             ))}
             <a
-              href="#contact"
+              href="/confidential-review"
               onClick={() => setIsOpen(false)}
               className="block w-full text-center px-6 py-3 bg-[#0f172a] text-white text-sm font-medium rounded hover:bg-[#1e293b] transition-colors"
             >
