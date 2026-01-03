@@ -9,6 +9,7 @@ const navLinks = [
   { href: '/capital-solutions', label: 'Capital Solutions' },
   { href: '/value-creation', label: 'Value Creation' },
   { href: '/who-we-partner-with', label: 'Who We Partner With' },
+  { href: '/confidential-review', label: 'Contact Us' },
 ];
 
 export default function MobileMenu() {
@@ -42,11 +43,11 @@ export default function MobileMenu() {
               </a>
             ))}
             <a
-              href="/confidential-review"
+              href="/apply"
               onClick={() => setIsOpen(false)}
-              className="block w-full text-center px-6 py-3 bg-[#0f172a] text-white text-sm font-medium rounded hover:bg-[#1e293b] transition-colors"
+              className="block w-full text-center px-6 py-3 bg-[#b8860b] text-white text-sm font-medium rounded hover:bg-[#d4a944] transition-colors"
             >
-              Request a Review
+              Apply Now
             </a>
           </div>
         </div>

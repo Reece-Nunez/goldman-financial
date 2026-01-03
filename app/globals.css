@@ -161,6 +161,90 @@ a {
   visibility: hidden !important;
 }
 
+/* Google Places Autocomplete Dropdown Styles */
+.pac-container {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  margin-top: 4px !important;
+  font-family: inherit !important;
+  z-index: 10000 !important;
+}
+
+.pac-item {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+  border-top: 1px solid #f3f4f6 !important;
+  padding: 10px 12px !important;
+  cursor: pointer !important;
+  line-height: 1.4 !important;
+}
+
+.pac-item:first-child {
+  border-top: none !important;
+}
+
+.pac-item:hover,
+.pac-item-selected {
+  background-color: #fef9e7 !important;
+}
+
+.pac-item-query {
+  color: #1f2937 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.pac-matched {
+  color: #b8860b !important;
+  font-weight: 600 !important;
+}
+
+.pac-item-selected .pac-item-query,
+.pac-item:hover .pac-item-query {
+  color: #1f2937 !important;
+}
+
+/* Secondary text (city, state, country) */
+.pac-secondary-text {
+  color: #6b7280 !important;
+  font-size: 12px !important;
+}
+
+/* Location icon */
+.pac-icon {
+  background-image: none !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 10px !important;
+  background-color: transparent !important;
+}
+
+.pac-icon::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  background-color: #b8860b;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  mask-size: contain;
+  -webkit-mask-size: contain;
+}
+
+.pac-icon-marker {
+  background-image: none !important;
+}
+
+/* Google logo at bottom */
+.pac-logo::after {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 116 15' fill='%239ca3af'%3E%3Cpath d='M0 9.75h4.5v-1.5H1.5v-1.5h2.25v-1.5H1.5v-1.5h3v-1.5H0v7.5zm5.25-3.75c0 2.07 1.68 3.75 3.75 3.75s3.75-1.68 3.75-3.75S11.07 2.25 9 2.25 5.25 3.93 5.25 6zm1.5 0c0-1.24 1.01-2.25 2.25-2.25s2.25 1.01 2.25 2.25-1.01 2.25-2.25 2.25-2.25-1.01-2.25-2.25zm7.5 0c0 2.07 1.68 3.75 3.75 3.75s3.75-1.68 3.75-3.75S20.07 2.25 18 2.25s-3.75 1.68-3.75 3.75zm1.5 0c0-1.24 1.01-2.25 2.25-2.25s2.25 1.01 2.25 2.25-1.01 2.25-2.25 2.25-2.25-1.01-2.25-2.25zm6.75 3.75h1.5V6.9c0-1.16.94-2.1 2.1-2.1h.15v-1.5c-.93 0-1.74.48-2.25 1.2V2.25h-1.5v7.5zm5.25 0h1.5V5.25h1.5v-1.5h-1.5V2.25h-1.5v1.5h-1.5v1.5h1.5v4.5z'/%3E%3C/svg%3E");
+  padding: 8px 12px !important;
+  height: auto !important;
+}
+
 /* Print Styles */
 @media print {
   nav,

@@ -48,6 +48,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
                 { href: "/investment-strategy", label: "Investment Strategy" },
                 { href: "/capital-solutions", label: "Capital Solutions" },
                 { href: "/who-we-partner-with", label: "Who We Partner With" },
+                { href: "/confidential-review", label: "Contact Us" },
               ].map((link, i) => (
                 <motion.a
                   key={link.href}
@@ -61,15 +62,15 @@ export default function PageLayout({ children }: PageLayoutProps) {
                 </motion.a>
               ))}
               <motion.a
-                href="/confidential-review"
+                href="/apply"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
+                transition={{ delay: 0.9 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}
-                className="ml-4 px-6 py-2.5 bg-[#0f172a] text-white text-sm font-medium rounded hover:bg-[#1e293b] transition-colors"
+                className="ml-4 px-6 py-2.5 bg-[#b8860b] text-white text-sm font-medium rounded hover:bg-[#d4a944] transition-colors"
               >
-                Contact Us
+                Apply Now
               </motion.a>
             </div>
             <MobileMenu />
@@ -116,6 +117,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
                   { href: "/value-creation", label: "Value Creation" },
                   { href: "/who-we-partner-with", label: "Who We Partner With" },
                   { href: "/confidential-review", label: "Contact" },
+                  { href: "/apply", label: "Apply Now" },
                 ].map((link) => (
                   <li key={link.href}>
                     <motion.a
