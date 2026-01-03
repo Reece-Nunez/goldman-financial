@@ -5,6 +5,35 @@ import { generateApplicationPDF } from '@/app/lib/generateApplicationPDF';
 // Increase timeout for large file uploads (60 seconds)
 export const maxDuration = 60;
 
+// Verify reCAPTCHA token
+async function verifyRecaptcha(token: string): Promise<{ success: boolean; score?: number }> {
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+
+  if (!secretKey) {
+    console.warn('RECAPTCHA_SECRET_KEY not configured, skipping verification');
+    return { success: true };
+  }
+
+  try {
+    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `secret=${secretKey}&response=${token}`,
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.score !== undefined) {
+      return { success: data.score >= 0.5, score: data.score };
+    }
+
+    return { success: data.success };
+  } catch (error) {
+    console.error('reCAPTCHA verification error:', error);
+    return { success: false };
+  }
+}
+
 // Resend will be initialized when the API is called
 let resend: Resend | null = null;
 
@@ -34,7 +63,19 @@ export async function POST(request: NextRequest) {
     const applicationData = JSON.parse(formData.get('formData') as string);
     const signature = formData.get('signature') as string;
     const secondSignature = formData.get('secondSignature') as string;
+    const recaptchaToken = formData.get('recaptchaToken') as string;
     const submissionDate = formData.get('submissionDate') as string;
+
+    // Verify reCAPTCHA
+    if (recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken);
+      if (!recaptchaResult.success) {
+        return NextResponse.json(
+          { error: 'Security verification failed. Please try again.' },
+          { status: 400 }
+        );
+      }
+    }
 
     // Collect bank statement files
     const bankStatementAttachments: { filename: string; content: Buffer }[] = [];

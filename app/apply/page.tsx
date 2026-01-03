@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import SignatureCanvas from 'react-signature-canvas';
@@ -386,6 +387,8 @@ export default function ApplyPage() {
   const secondSignatureRef = useRef<SignatureCanvas>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { executeRecaptcha } = useGoogleReCaptcha();
+
   const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -668,13 +671,19 @@ export default function ApplyPage() {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!validateStep(8)) return;
 
     setIsSubmitting(true);
     setSubmitError('');
 
     try {
+      // Execute reCAPTCHA
+      let recaptchaToken = '';
+      if (executeRecaptcha) {
+        recaptchaToken = await executeRecaptcha('submit_application');
+      }
+
       const signature = signatureRef.current?.isEmpty()
         ? null
         : signatureRef.current?.toDataURL();
@@ -686,6 +695,7 @@ export default function ApplyPage() {
       submitData.append('formData', JSON.stringify(formData));
       submitData.append('signature', signature || '');
       submitData.append('secondSignature', secondSignature || '');
+      submitData.append('recaptchaToken', recaptchaToken);
       submitData.append('submissionDate', new Date().toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
@@ -713,7 +723,7 @@ export default function ApplyPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [executeRecaptcha, formData, bankStatements, validateStep]);
 
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
@@ -1749,6 +1759,19 @@ export default function ApplyPage() {
               </button>
             )}
           </div>
+
+          {/* reCAPTCHA Privacy Notice */}
+          <p className="text-xs text-gray-500 text-center mt-6">
+            This site is protected by reCAPTCHA and the Google{' '}
+            <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#b8860b]">
+              Privacy Policy
+            </a>{' '}
+            and{' '}
+            <a href="https://policies.google.com/terms" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#b8860b]">
+              Terms of Service
+            </a>{' '}
+            apply.
+          </p>
         </div>
       </div>
     </PageLayout>
