@@ -18,6 +18,8 @@ interface ApplicationData {
   legalStructure: string;
   stateOfIncorporation: string;
   federalTaxId: string;
+  industry?: string;
+  website?: string;
 
   // Primary Owner
   ownerFirstName: string;
@@ -51,12 +53,19 @@ interface ApplicationData {
   // Financial
   grossAnnualSales: string;
   averageMonthlyRevenue: string;
+  openLoansAdvances?: string;
+  hasBankruptcy?: string;
 
   // Properties
   properties?: Array<{
     address: string;
-    ownership: string;
-    monthlyPayment: string;
+    propertyType: string;
+    yearAcquired: string;
+    purchasePrice: string;
+    currentValue: string;
+    loanBalance: string;
+    lender: string;
+    titleHolders: string;
   }>;
 }
 
@@ -117,6 +126,18 @@ const getLegalStructureName = (value: string): string => {
     benefit_corporation: 'Benefit Corporation (B-Corp)',
   };
   return structures[value] || value;
+};
+
+// Get property type name
+const getPropertyTypeName = (value: string): string => {
+  const types: { [key: string]: string } = {
+    residential: 'Residential',
+    commercial: 'Commercial',
+    industrial: 'Industrial',
+    land: 'Land',
+    mixed_use: 'Mixed Use',
+  };
+  return types[value] || value || 'N/A';
 };
 
 // Helper to draw text and return new Y position
@@ -339,6 +360,9 @@ export async function generateApplicationPDF(
   drawField(page, 'State of Incorporation', getStateName(applicationData.stateOfIncorporation), col2X, y + 35, helvetica, helveticaBold);
 
   y = drawField(page, 'Federal Tax ID (EIN)', formatEIN(applicationData.federalTaxId), col1X, y, helvetica, helveticaBold);
+  drawField(page, 'Industry', applicationData.industry || 'N/A', col2X, y + 35, helvetica, helveticaBold);
+
+  y = drawField(page, 'Website', applicationData.website || 'N/A', col1X, y, helvetica, helveticaBold);
 
   y = drawField(page, 'Business Address', applicationData.businessAddress, col1X, y, helvetica, helveticaBold, contentWidth);
   y -= 10;
@@ -390,23 +414,26 @@ export async function generateApplicationPDF(
   // =====================
   // FINANCIAL INFORMATION
   // =====================
-  checkNewPage(100);
+  checkNewPage(150);
   y = drawSectionHeader(page, 'Business Financial Information', y, helveticaBold, pageWidth);
 
   y = drawField(page, 'Gross Annual Sales', formatCurrency(applicationData.grossAnnualSales), col1X, y, helvetica, helveticaBold);
   drawField(page, 'Average Monthly Revenue', formatCurrency(applicationData.averageMonthlyRevenue), col2X, y + 35, helvetica, helveticaBold);
+
+  y = drawField(page, 'Open Loans/Advances', formatCurrency(applicationData.openLoansAdvances || '0'), col1X, y, helvetica, helveticaBold);
+  drawField(page, 'Bankruptcy History', applicationData.hasBankruptcy === 'yes' ? 'Yes' : applicationData.hasBankruptcy === 'no' ? 'No' : 'N/A', col2X, y + 35, helvetica, helveticaBold);
   y -= 10;
 
   // =====================
   // PROPERTY OWNERSHIP (if any)
   // =====================
   if (applicationData.properties && applicationData.properties.length > 0) {
-    checkNewPage(100);
+    checkNewPage(150);
     y = drawSectionHeader(page, 'Property Ownership', y, helveticaBold, pageWidth);
 
     for (let i = 0; i < applicationData.properties.length; i++) {
       const prop = applicationData.properties[i];
-      checkNewPage(80);
+      checkNewPage(180);
 
       page.drawText(`Property ${i + 1}`, {
         x: col1X,
@@ -418,8 +445,17 @@ export async function generateApplicationPDF(
       y -= 20;
 
       y = drawField(page, 'Address', prop.address || 'N/A', col1X, y, helvetica, helveticaBold, contentWidth);
-      y = drawField(page, 'Ownership Status', prop.ownership === 'own' ? 'Own' : prop.ownership === 'rent' ? 'Rent' : 'N/A', col1X, y, helvetica, helveticaBold);
-      drawField(page, 'Monthly Payment', prop.monthlyPayment ? formatCurrency(prop.monthlyPayment) : 'N/A', col2X, y + 35, helvetica, helveticaBold);
+
+      y = drawField(page, 'Property Type', getPropertyTypeName(prop.propertyType), col1X, y, helvetica, helveticaBold);
+      drawField(page, 'Year Acquired', prop.yearAcquired || 'N/A', col2X, y + 35, helvetica, helveticaBold);
+
+      y = drawField(page, 'Purchase Price', prop.purchasePrice ? formatCurrency(prop.purchasePrice) : 'N/A', col1X, y, helvetica, helveticaBold);
+      drawField(page, 'Current Value', prop.currentValue ? formatCurrency(prop.currentValue) : 'N/A', col2X, y + 35, helvetica, helveticaBold);
+
+      y = drawField(page, 'Loan Balance', prop.loanBalance ? formatCurrency(prop.loanBalance) : 'N/A', col1X, y, helvetica, helveticaBold);
+      drawField(page, 'Lender', prop.lender || 'N/A', col2X, y + 35, helvetica, helveticaBold);
+
+      y = drawField(page, 'Title Holders', prop.titleHolders || 'N/A', col1X, y, helvetica, helveticaBold, contentWidth);
       y -= 10;
     }
   }
@@ -456,8 +492,44 @@ export async function generateApplicationPDF(
   // =====================
   // SIGNATURES
   // =====================
-  checkNewPage(180);
+  checkNewPage(280);
   y = drawSectionHeader(page, 'Authorization & Signatures', y, helveticaBold, pageWidth);
+
+  // Authorization Statement
+  const authorizationText = [
+    'By signing below, each of the businesses and business owners/officers listed above (individually and collectively, "You") authorize Goldman',
+    'Financial Inc. (GF), and its representatives, successors, assigns, and designees (collectively, "Recipients"), who may be involved in or acquire',
+    'commercial loans with daily repayment features or purchases of future receivables (including but not limited to Merchant Cash Advance',
+    'transactions, referred to herein as "Transactions"), to obtain consumer, personal, business, and investigative reports, as well as other',
+    'information about You from one or more banks, creditors, credit reporting agencies, or other third parties. This authorization includes the right',
+    'to access and review financial records, including but not limited to bank statements and credit card processor statements. GF is further',
+    'authorized to transmit this application, together with any information obtained in connection with it, to any or all Recipients for the purposes',
+    'described above.',
+    '',
+    'You further authorize any creditor or financial institution to release information relating to You directly to GF and its Principals. You also consent',
+    'to receive any legally required notices by electronic mail at the email address provided in this application. In addition, You authorize any lender',
+    'or Recipient to contact You by telephone call or text message for marketing purposes at the phone number(s) provided in this application, even',
+    'if such number(s) appear on a state, federal, or corporate "Do Not Call" registry.',
+    '',
+    'By signing this form, You consent to receive SMS messages. Message and data rates may apply. Message frequency may vary based on',
+    'interactions between You and our agents. You may opt out at any time by replying STOP, or reply HELP for additional assistance.',
+  ];
+
+  for (const line of authorizationText) {
+    if (line === '') {
+      y -= 6; // Extra spacing for paragraph breaks
+    } else {
+      page.drawText(line, {
+        x: col1X,
+        y,
+        size: 7.5,
+        font: helvetica,
+        color: rgb(0.25, 0.25, 0.25),
+      });
+      y -= 10;
+    }
+  }
+  y -= 15;
 
   // Primary Owner Signature
   page.drawText('Primary Owner Signature', {

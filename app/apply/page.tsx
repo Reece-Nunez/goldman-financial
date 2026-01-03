@@ -94,8 +94,13 @@ const STEPS = [
 interface Property {
   id: string;
   address: string;
-  ownership: 'own' | 'rent' | '';
-  monthlyPayment: string;
+  propertyType: string;
+  yearAcquired: string;
+  purchasePrice: string;
+  currentValue: string;
+  loanBalance: string;
+  lender: string;
+  titleHolders: string;
 }
 
 interface FormData {
@@ -111,6 +116,8 @@ interface FormData {
   legalStructure: string;
   stateOfIncorporation: string;
   federalTaxId: string;
+  industry: string;
+  website: string;
   ownerFirstName: string;
   ownerLastName: string;
   ownerTitle: string;
@@ -138,6 +145,8 @@ interface FormData {
   secondOwnerDriversLicenseState: string;
   grossAnnualSales: string;
   averageMonthlyRevenue: string;
+  openLoansAdvances: string;
+  hasBankruptcy: 'yes' | 'no' | '';
   properties: Property[];
 }
 
@@ -154,6 +163,8 @@ const initialFormData: FormData = {
   legalStructure: '',
   stateOfIncorporation: '',
   federalTaxId: '',
+  industry: '',
+  website: '',
   ownerFirstName: '',
   ownerLastName: '',
   ownerTitle: '',
@@ -181,6 +192,8 @@ const initialFormData: FormData = {
   secondOwnerDriversLicenseState: '',
   grossAnnualSales: '',
   averageMonthlyRevenue: '',
+  openLoansAdvances: '',
+  hasBankruptcy: '',
   properties: [],
 };
 
@@ -435,7 +448,7 @@ export default function ApplyPage() {
     }
   };
 
-  const handleCurrencyChange = (field: 'amountRequested' | 'grossAnnualSales' | 'averageMonthlyRevenue', value: string) => {
+  const handleCurrencyChange = (field: 'amountRequested' | 'grossAnnualSales' | 'averageMonthlyRevenue' | 'openLoansAdvances', value: string) => {
     const numbers = value.replace(/\D/g, '');
     setFormData(prev => ({ ...prev, [field]: numbers }));
   };
@@ -530,8 +543,13 @@ export default function ApplyPage() {
     const newProperty: Property = {
       id: Date.now().toString(),
       address: '',
-      ownership: '',
-      monthlyPayment: '',
+      propertyType: '',
+      yearAcquired: '',
+      purchasePrice: '',
+      currentValue: '',
+      loanBalance: '',
+      lender: '',
+      titleHolders: '',
     };
     setFormData(prev => ({ ...prev, properties: [...prev.properties, newProperty] }));
   };
@@ -589,6 +607,7 @@ export default function ApplyPage() {
         if (!formData.legalStructure) errors.push('Legal structure is required');
         if (!formData.stateOfIncorporation) errors.push('State of incorporation is required');
         if (!formData.federalTaxId) errors.push('Federal Tax ID is required');
+        if (!formData.industry) errors.push('Industry is required');
         break;
       case 3:
         if (!formData.ownerFirstName) errors.push('First name is required');
@@ -632,6 +651,8 @@ export default function ApplyPage() {
       case 5:
         if (!formData.grossAnnualSales) errors.push('Gross annual sales is required');
         if (!formData.averageMonthlyRevenue) errors.push('Average monthly revenue is required');
+        if (!formData.openLoansAdvances) errors.push('Open loans or advances is required');
+        if (!formData.hasBankruptcy) errors.push('Bankruptcy history is required');
         break;
       case 6:
         // Properties are optional
@@ -1047,6 +1068,32 @@ export default function ApplyPage() {
                         className={inputClass}
                         placeholder="XX-XXXXXXX"
                       />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className={labelClass}>
+                          Industry <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.industry}
+                          onChange={(e) => handleInputChange('industry', e.target.value)}
+                          className={inputClass}
+                          placeholder="e.g., Construction, Retail, Healthcare"
+                        />
+                      </div>
+                      <div>
+                        <label className={labelClass}>
+                          Company Website
+                        </label>
+                        <input
+                          type="url"
+                          value={formData.website}
+                          onChange={(e) => handleInputChange('website', e.target.value)}
+                          className={inputClass}
+                          placeholder="https://www.example.com"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1465,6 +1512,48 @@ export default function ApplyPage() {
                         placeholder="$0"
                       />
                     </div>
+                    <div>
+                      <label className={labelClass}>
+                        Open Loans or Advances <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.openLoansAdvances ? formatCurrency(formData.openLoansAdvances) : ''}
+                        onChange={(e) => handleCurrencyChange('openLoansAdvances', e.target.value)}
+                        className={inputClass}
+                        placeholder="$0"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Total outstanding balance of all business loans and advances</p>
+                    </div>
+                    <div>
+                      <label className={labelClass}>
+                        Has the business ever filed for bankruptcy? <span className="text-red-500">*</span>
+                      </label>
+                      <div className="flex gap-4 mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="hasBankruptcy"
+                            value="yes"
+                            checked={formData.hasBankruptcy === 'yes'}
+                            onChange={(e) => handleInputChange('hasBankruptcy', e.target.value)}
+                            className="w-4 h-4 text-[#b8860b] border-gray-300 focus:ring-[#b8860b]"
+                          />
+                          <span className="text-gray-700">Yes</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="hasBankruptcy"
+                            value="no"
+                            checked={formData.hasBankruptcy === 'no'}
+                            onChange={(e) => handleInputChange('hasBankruptcy', e.target.value)}
+                            className="w-4 h-4 text-[#b8860b] border-gray-300 focus:ring-[#b8860b]"
+                          />
+                          <span className="text-gray-700">No</span>
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1476,7 +1565,7 @@ export default function ApplyPage() {
                     {STEPS[5].title}
                   </h2>
                   <p className="text-gray-500 text-sm mb-6">
-                    Optional: Add any properties you own or rent
+                    Optional: Add any real estate properties owned by the business or principals
                   </p>
                   <div className="space-y-6">
                     {formData.properties.length === 0 ? (
@@ -1516,27 +1605,86 @@ export default function ApplyPage() {
                               </div>
                               <div className="grid md:grid-cols-2 gap-4">
                                 <div>
-                                  <label className={labelClass}>Ownership Status</label>
+                                  <label className={labelClass}>Property Type</label>
                                   <select
-                                    value={property.ownership}
-                                    onChange={(e) => updateProperty(property.id, 'ownership', e.target.value)}
+                                    value={property.propertyType}
+                                    onChange={(e) => updateProperty(property.id, 'propertyType', e.target.value)}
                                     className={selectClass}
                                   >
-                                    <option value="">Select</option>
-                                    <option value="own">Own</option>
-                                    <option value="rent">Rent</option>
+                                    <option value="">Select Type</option>
+                                    <option value="residential">Residential</option>
+                                    <option value="commercial">Commercial</option>
+                                    <option value="industrial">Industrial</option>
+                                    <option value="land">Land</option>
+                                    <option value="mixed_use">Mixed Use</option>
                                   </select>
                                 </div>
                                 <div>
-                                  <label className={labelClass}>Monthly Payment</label>
+                                  <label className={labelClass}>Year Acquired</label>
+                                  <input
+                                    type="number"
+                                    min="1900"
+                                    max={new Date().getFullYear()}
+                                    value={property.yearAcquired}
+                                    onChange={(e) => updateProperty(property.id, 'yearAcquired', e.target.value)}
+                                    className={inputClass}
+                                    placeholder="e.g., 2015"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className={labelClass}>Purchase Price</label>
                                   <input
                                     type="text"
-                                    value={property.monthlyPayment ? formatCurrency(property.monthlyPayment) : ''}
-                                    onChange={(e) => updateProperty(property.id, 'monthlyPayment', e.target.value.replace(/\D/g, ''))}
+                                    value={property.purchasePrice ? formatCurrency(property.purchasePrice) : ''}
+                                    onChange={(e) => updateProperty(property.id, 'purchasePrice', e.target.value.replace(/\D/g, ''))}
                                     className={inputClass}
                                     placeholder="$0"
                                   />
                                 </div>
+                                <div>
+                                  <label className={labelClass}>Current Value</label>
+                                  <input
+                                    type="text"
+                                    value={property.currentValue ? formatCurrency(property.currentValue) : ''}
+                                    onChange={(e) => updateProperty(property.id, 'currentValue', e.target.value.replace(/\D/g, ''))}
+                                    className={inputClass}
+                                    placeholder="$0"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                  <label className={labelClass}>Loan Balance</label>
+                                  <input
+                                    type="text"
+                                    value={property.loanBalance ? formatCurrency(property.loanBalance) : ''}
+                                    onChange={(e) => updateProperty(property.id, 'loanBalance', e.target.value.replace(/\D/g, ''))}
+                                    className={inputClass}
+                                    placeholder="$0"
+                                  />
+                                </div>
+                                <div>
+                                  <label className={labelClass}>Lender</label>
+                                  <input
+                                    type="text"
+                                    value={property.lender}
+                                    onChange={(e) => updateProperty(property.id, 'lender', e.target.value)}
+                                    className={inputClass}
+                                    placeholder="e.g., Bank of America"
+                                  />
+                                </div>
+                              </div>
+                              <div>
+                                <label className={labelClass}>Title Holders</label>
+                                <input
+                                  type="text"
+                                  value={property.titleHolders}
+                                  onChange={(e) => updateProperty(property.id, 'titleHolders', e.target.value)}
+                                  className={inputClass}
+                                  placeholder="Names on the title"
+                                />
                               </div>
                             </div>
                           </div>
@@ -1643,12 +1791,15 @@ export default function ApplyPage() {
                   </div>
 
                   {/* Authorization */}
-                  <div className="prose prose-sm max-w-none text-gray-600 mb-6">
-                    <p className="mb-4">
-                      By signing below, I/we authorize Goldman and Co to obtain business and personal credit reports, bank statements, tax returns, and other financial documents as needed for the evaluation of this application. I/we certify that all information provided is true and accurate to the best of my/our knowledge.
+                  <div className="prose prose-sm max-w-none text-gray-600 mb-6 text-xs leading-relaxed">
+                    <p className="mb-3">
+                      By signing below, each of the businesses and business owners/officers listed above (individually and collectively, &quot;You&quot;) authorize Goldman Financial Inc. (GF), and its representatives, successors, assigns, and designees (collectively, &quot;Recipients&quot;), who may be involved in or acquire commercial loans with daily repayment features or purchases of future receivables (including but not limited to Merchant Cash Advance transactions, referred to herein as &quot;Transactions&quot;), to obtain consumer, personal, business, and investigative reports, as well as other information about You from one or more banks, creditors, credit reporting agencies, or other third parties. This authorization includes the right to access and review financial records, including but not limited to bank statements and credit card processor statements. GF is further authorized to transmit this application, together with any information obtained in connection with it, to any or all Recipients for the purposes described above.
+                    </p>
+                    <p className="mb-3">
+                      You further authorize any creditor or financial institution to release information relating to You directly to GF and its Principals. You also consent to receive any legally required notices by electronic mail at the email address provided in this application. In addition, You authorize any lender or Recipient to contact You by telephone call or text message for marketing purposes at the phone number(s) provided in this application, even if such number(s) appear on a state, federal, or corporate &quot;Do Not Call&quot; registry.
                     </p>
                     <p>
-                      I/we agree to the terms and conditions of any funding arrangement that may result from this application, subject to final approval and documentation.
+                      By signing this form, You consent to receive SMS messages. Message and data rates may apply. Message frequency may vary based on interactions between You and our agents. You may opt out at any time by replying STOP, or reply HELP for additional assistance.
                     </p>
                   </div>
 
