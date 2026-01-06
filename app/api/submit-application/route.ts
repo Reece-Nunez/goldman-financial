@@ -322,10 +322,26 @@ export async function POST(request: NextRequest) {
     let zohoLeadId: string | undefined;
     try {
       const zohoLeadData = formatApplicationForZoho(applicationData);
-      const zohoResult = await createZohoLead(zohoLeadData);
+
+      // Prepare bank statements for Zoho attachment upload
+      const zohoAttachments = bankStatementAttachments.map(att => {
+        const ext = att.filename.toLowerCase().split('.').pop();
+        let contentType = 'application/octet-stream';
+        if (ext === 'pdf') contentType = 'application/pdf';
+        else if (ext === 'png') contentType = 'image/png';
+        else if (ext === 'jpg' || ext === 'jpeg') contentType = 'image/jpeg';
+
+        return {
+          filename: att.filename,
+          content: att.content,
+          contentType,
+        };
+      });
+
+      const zohoResult = await createZohoLead(zohoLeadData, zohoAttachments);
       if (zohoResult.success) {
         zohoLeadId = zohoResult.leadId;
-        console.log('Zoho lead created:', zohoLeadId);
+        console.log('Zoho lead created:', zohoLeadId, 'Assigned to:', zohoResult.assignedTo);
       } else {
         console.error('Failed to create Zoho lead:', zohoResult.error);
       }

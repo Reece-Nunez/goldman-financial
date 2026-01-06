@@ -136,8 +136,57 @@ async function getNextRoundRobinRep(accessToken: string): Promise<{ id: string; 
   }
 }
 
+// Upload attachment to a Zoho CRM record
+async function uploadAttachmentToZoho(
+  accessToken: string,
+  recordId: string,
+  fileName: string,
+  fileBuffer: Buffer,
+  contentType: string
+): Promise<boolean> {
+  try {
+    const boundary = '----FormBoundary' + Math.random().toString(36).substring(2);
+
+    const bodyParts = [
+      `--${boundary}\r\n`,
+      `Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n`,
+      `Content-Type: ${contentType}\r\n\r\n`,
+    ];
+
+    const bodyStart = Buffer.from(bodyParts.join(''));
+    const bodyEnd = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const body = Buffer.concat([bodyStart, fileBuffer, bodyEnd]);
+
+    const response = await fetch(
+      `https://www.zohoapis.com/crm/v2/Leads/${recordId}/Attachments`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`,
+          'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        },
+        body: body,
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Failed to upload attachment:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error uploading attachment:', error);
+    return false;
+  }
+}
+
 // Create a lead in Zoho CRM with round-robin assignment
-export async function createZohoLead(leadData: ZohoLeadData): Promise<{ success: boolean; leadId?: string; assignedTo?: string; error?: string }> {
+export async function createZohoLead(
+  leadData: ZohoLeadData,
+  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>
+): Promise<{ success: boolean; leadId?: string; assignedTo?: string; error?: string }> {
   try {
     const accessToken = await getAccessToken();
 
@@ -171,9 +220,30 @@ export async function createZohoLead(leadData: ZohoLeadData): Promise<{ success:
     const result: ZohoCreateResponse = await response.json();
 
     if (result.data && result.data[0]?.status === 'success') {
+      const leadId = result.data[0].details.id;
+
+      // Upload attachments if any
+      if (attachments && attachments.length > 0) {
+        console.log(`Uploading ${attachments.length} attachment(s) to lead ${leadId}`);
+        for (const attachment of attachments) {
+          const uploaded = await uploadAttachmentToZoho(
+            accessToken,
+            leadId,
+            attachment.filename,
+            attachment.content,
+            attachment.contentType
+          );
+          if (uploaded) {
+            console.log(`Uploaded: ${attachment.filename}`);
+          } else {
+            console.error(`Failed to upload: ${attachment.filename}`);
+          }
+        }
+      }
+
       return {
         success: true,
-        leadId: result.data[0].details.id,
+        leadId: leadId,
         assignedTo: nextRep.name
       };
     }
@@ -294,6 +364,18 @@ export function formatApplicationForZoho(applicationData: {
   averageMonthlyRevenue?: string;
   openLoansAdvances?: string;
   hasBankruptcy?: 'yes' | 'no' | '';
+
+  // Properties
+  properties?: Array<{
+    address: string;
+    propertyType: string;
+    yearAcquired: string;
+    purchasePrice: string;
+    currentValue: string;
+    loanBalance: string;
+    lender: string;
+    titleHolders: string;
+  }>;
 }): ZohoLeadData {
   // Parse addresses
   const businessAddr = parseAddress(applicationData.businessAddress || '');
@@ -386,7 +468,25 @@ export function formatApplicationForZoho(applicationData: {
       `Use of Funds: ${applicationData.useOfFunds || 'N/A'}`,
       `Monthly Revenue: $${parseCurrency(applicationData.averageMonthlyRevenue || '').toLocaleString()}`,
       `Gross Annual Sales: $${parseCurrency(applicationData.grossAnnualSales || '').toLocaleString()}`,
-    ].join('\n'),
+      '',
+      // Add properties if any exist
+      ...(applicationData.properties && applicationData.properties.length > 0
+        ? [
+            '--- PROPERTIES ---',
+            ...applicationData.properties.map((prop, index) => [
+              `Property ${index + 1}:`,
+              `  Address: ${prop.address || 'N/A'}`,
+              `  Type: ${prop.propertyType || 'N/A'}`,
+              `  Year Acquired: ${prop.yearAcquired || 'N/A'}`,
+              `  Purchase Price: $${parseCurrency(prop.purchasePrice || '').toLocaleString()}`,
+              `  Current Value: $${parseCurrency(prop.currentValue || '').toLocaleString()}`,
+              `  Loan Balance: $${parseCurrency(prop.loanBalance || '').toLocaleString()}`,
+              `  Lender: ${prop.lender || 'N/A'}`,
+              `  Title Holders: ${prop.titleHolders || 'N/A'}`,
+            ].join('\n')),
+          ]
+        : []),
+    ].filter(Boolean).join('\n'),
   };
 
   // Remove null/undefined values to avoid API errors
