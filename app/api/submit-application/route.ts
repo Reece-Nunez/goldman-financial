@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { generateApplicationPDF } from '@/app/lib/generateApplicationPDF';
+import { createZohoLead, formatApplicationForZoho } from '@/app/lib/zoho';
 
 // Increase timeout for large file uploads (60 seconds)
 export const maxDuration = 60;
@@ -317,7 +318,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true, messageId: data?.id });
+    // Create lead in Zoho CRM
+    let zohoLeadId: string | undefined;
+    try {
+      const zohoLeadData = formatApplicationForZoho(applicationData);
+      const zohoResult = await createZohoLead(zohoLeadData);
+      if (zohoResult.success) {
+        zohoLeadId = zohoResult.leadId;
+        console.log('Zoho lead created:', zohoLeadId);
+      } else {
+        console.error('Failed to create Zoho lead:', zohoResult.error);
+      }
+    } catch (zohoError) {
+      // Log but don't fail the request if Zoho integration fails
+      console.error('Zoho CRM integration error:', zohoError);
+    }
+
+    return NextResponse.json({ success: true, messageId: data?.id, zohoLeadId });
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to process application', details: error instanceof Error ? error.message : String(error) },
