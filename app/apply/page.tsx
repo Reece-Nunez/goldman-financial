@@ -619,10 +619,8 @@ export default function ApplyPage() {
         if (!formData.ownerDOB) errors.push('Date of birth is required');
         if (!formData.ownerPhone) errors.push('Phone number is required');
         if (!formData.ownerEmail) errors.push('Email is required');
-        if (!formData.ownerDriversLicenseState) errors.push('Driver\'s license state is required');
-        if (!formData.ownerDriversLicense) {
-          errors.push('Driver\'s license is required');
-        } else if (formData.ownerDriversLicenseState) {
+        // Driver's license is optional, but validate format if provided
+        if (formData.ownerDriversLicense && formData.ownerDriversLicenseState) {
           const dlValidation = validateDriversLicense(formData.ownerDriversLicense, formData.ownerDriversLicenseState);
           if (!dlValidation.valid) errors.push(dlValidation.message);
         }
@@ -639,10 +637,8 @@ export default function ApplyPage() {
           if (!formData.secondOwnerDOB) errors.push('Second owner date of birth is required');
           if (!formData.secondOwnerPhone) errors.push('Second owner phone is required');
           if (!formData.secondOwnerEmail) errors.push('Second owner email is required');
-          if (!formData.secondOwnerDriversLicenseState) errors.push('Second owner driver\'s license state is required');
-          if (!formData.secondOwnerDriversLicense) {
-            errors.push('Second owner driver\'s license is required');
-          } else if (formData.secondOwnerDriversLicenseState) {
+          // Driver's license is optional, but validate format if provided
+          if (formData.secondOwnerDriversLicense && formData.secondOwnerDriversLicenseState) {
             const dlValidation = validateDriversLicense(formData.secondOwnerDriversLicense, formData.secondOwnerDriversLicenseState);
             if (!dlValidation.valid) errors.push(`Second owner: ${dlValidation.message}`);
           }
@@ -1227,7 +1223,7 @@ export default function ApplyPage() {
                     </div>
                     <div className="grid md:grid-cols-2 gap-6">
                       <div>
-                        <label className={labelClass}>Driver&apos;s License State <span className="text-red-500">*</span></label>
+                        <label className={labelClass}>Driver&apos;s License State <span className="text-gray-400">(Optional)</span></label>
                         <select
                           value={formData.ownerDriversLicenseState}
                           onChange={(e) => handleDLStateChange(e.target.value)}
@@ -1239,7 +1235,7 @@ export default function ApplyPage() {
                         </select>
                       </div>
                       <div>
-                        <label className={labelClass}>Driver&apos;s License Number <span className="text-red-500">*</span></label>
+                        <label className={labelClass}>Driver&apos;s License Number <span className="text-gray-400">(Optional)</span></label>
                         <input
                           type="text"
                           value={formData.ownerDriversLicense}
@@ -1435,7 +1431,7 @@ export default function ApplyPage() {
                         </div>
                         <div className="grid md:grid-cols-2 gap-6">
                           <div>
-                            <label className={labelClass}>Driver&apos;s License State <span className="text-red-500">*</span></label>
+                            <label className={labelClass}>Driver&apos;s License State <span className="text-gray-400">(Optional)</span></label>
                             <select
                               value={formData.secondOwnerDriversLicenseState}
                               onChange={(e) => handleDLStateChange(e.target.value, true)}
@@ -1447,7 +1443,7 @@ export default function ApplyPage() {
                             </select>
                           </div>
                           <div>
-                            <label className={labelClass}>Driver&apos;s License Number <span className="text-red-500">*</span></label>
+                            <label className={labelClass}>Driver&apos;s License Number <span className="text-gray-400">(Optional)</span></label>
                             <input
                               type="text"
                               value={formData.secondOwnerDriversLicense}

@@ -338,7 +338,7 @@ export async function POST(request: NextRequest) {
         };
       });
 
-      const zohoResult = await createZohoLead(zohoLeadData, zohoAttachments);
+      const zohoResult = await createZohoLead(zohoLeadData, zohoAttachments, applicationData.fundingSpecialistName);
       if (zohoResult.success) {
         zohoLeadId = zohoResult.leadId;
         console.log('Zoho lead created:', zohoLeadId, 'Assigned to:', zohoResult.assignedTo);

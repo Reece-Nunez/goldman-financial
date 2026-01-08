@@ -182,22 +182,54 @@ async function uploadAttachmentToZoho(
   }
 }
 
+// Find a rep by name (case-insensitive partial match)
+function findRepByName(name: string): { id: string; name: string } | null {
+  if (!name || !name.trim()) return null;
+
+  const normalizedSearch = name.trim().toLowerCase();
+
+  // Try exact match first (case-insensitive)
+  const exactMatch = ROUND_ROBIN_REPS.find(
+    rep => rep.name.toLowerCase() === normalizedSearch
+  );
+  if (exactMatch) return exactMatch;
+
+  // Try partial match (search name contained in rep name)
+  const partialMatch = ROUND_ROBIN_REPS.find(
+    rep => rep.name.toLowerCase().includes(normalizedSearch) ||
+           normalizedSearch.includes(rep.name.toLowerCase())
+  );
+  if (partialMatch) return partialMatch;
+
+  return null;
+}
+
 // Create a lead in Zoho CRM with round-robin assignment
 export async function createZohoLead(
   leadData: ZohoLeadData,
-  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>
+  attachments?: Array<{ filename: string; content: Buffer; contentType: string }>,
+  fundingSpecialistName?: string
 ): Promise<{ success: boolean; leadId?: string; assignedTo?: string; error?: string }> {
   try {
     const accessToken = await getAccessToken();
 
-    // Get the next rep in round-robin rotation
-    const nextRep = await getNextRoundRobinRep(accessToken);
-    console.log(`Assigning lead to: ${nextRep.name} (${nextRep.id})`);
+    // Check if funding specialist name matches a rep
+    let assignedRep: { id: string; name: string };
+    const matchedRep = findRepByName(fundingSpecialistName || '');
+
+    if (matchedRep) {
+      assignedRep = matchedRep;
+      console.log(`Funding specialist "${fundingSpecialistName}" matched to rep: ${assignedRep.name} (${assignedRep.id})`);
+    } else {
+      // No match found, use round-robin assignment
+      assignedRep = await getNextRoundRobinRep(accessToken);
+      console.log(`No rep match for "${fundingSpecialistName || 'N/A'}". Using round-robin: ${assignedRep.name} (${assignedRep.id})`);
+    }
 
     // Add the owner to the lead data
     const leadWithOwner = {
       ...leadData,
-      Owner: nextRep.id,
+      Owner: assignedRep.id,
     };
 
     const response = await fetch('https://www.zohoapis.com/crm/v2/Leads', {
@@ -244,7 +276,7 @@ export async function createZohoLead(
       return {
         success: true,
         leadId: leadId,
-        assignedTo: nextRep.name
+        assignedTo: assignedRep.name
       };
     }
 
