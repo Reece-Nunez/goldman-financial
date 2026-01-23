@@ -57,28 +57,42 @@ const formatCurrency = (value: string): string => {
 };
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  let step = 'initializing';
+
   try {
+    // Step 1: Parse form data
+    step = 'parsing_form_data';
+    console.log('[Submit] Starting application submission');
     const formData = await request.formData();
 
-    // Parse form data
+    // Step 2: Parse JSON data
+    step = 'parsing_json_data';
     const applicationData = JSON.parse(formData.get('formData') as string);
     const signature = formData.get('signature') as string;
     const secondSignature = formData.get('secondSignature') as string;
     const recaptchaToken = formData.get('recaptchaToken') as string;
     const submissionDate = formData.get('submissionDate') as string;
+    console.log(`[Submit] Parsed application for: ${applicationData.legalBusinessName}`);
 
-    // Verify reCAPTCHA
+    // Step 3: Verify reCAPTCHA
+    step = 'verifying_recaptcha';
     if (recaptchaToken) {
       const recaptchaResult = await verifyRecaptcha(recaptchaToken);
+      console.log(`[Submit] reCAPTCHA result: success=${recaptchaResult.success}, score=${recaptchaResult.score}`);
       if (!recaptchaResult.success) {
+        console.warn(`[Submit] reCAPTCHA failed for ${applicationData.legalBusinessName}, score: ${recaptchaResult.score}`);
         return NextResponse.json(
           { error: 'Security verification failed. Please try again.' },
           { status: 400 }
         );
       }
+    } else {
+      console.log('[Submit] No reCAPTCHA token provided, skipping verification');
     }
 
-    // Collect bank statement files
+    // Step 4: Collect bank statement files
+    step = 'collecting_bank_statements';
     const bankStatementAttachments: { filename: string; content: Buffer }[] = [];
     const bankStatementNames: string[] = [];
 
@@ -93,8 +107,11 @@ export async function POST(request: NextRequest) {
         bankStatementNames.push(file.name);
       }
     }
+    console.log(`[Submit] Collected ${bankStatementAttachments.length} bank statements`);
 
-    // Generate PDF
+    // Step 5: Generate PDF
+    step = 'generating_pdf';
+    console.log('[Submit] Generating PDF...');
     const pdfBuffer = await generateApplicationPDF(
       applicationData,
       signature || null,
@@ -102,6 +119,7 @@ export async function POST(request: NextRequest) {
       submissionDate,
       bankStatementNames
     );
+    console.log(`[Submit] PDF generated successfully (${pdfBuffer.length} bytes)`);
 
     // Create PDF filename
     const sanitizedBusinessName = applicationData.legalBusinessName
@@ -294,15 +312,18 @@ export async function POST(request: NextRequest) {
       }),
     ];
 
-    // Send email via Resend
+    // Step 6: Send email via Resend
+    step = 'sending_email';
     const resendClient = getResend();
     if (!resendClient) {
+      console.error('[Submit] Resend client not configured - RESEND_API_KEY missing');
       return NextResponse.json(
         { error: 'Email service not configured' },
         { status: 500 }
       );
     }
 
+    console.log(`[Submit] Sending email with ${allAttachments.length} attachments (total size: ${allAttachments.reduce((acc, att) => acc + att.content.length, 0)} bytes)`);
     const { data, error } = await resendClient.emails.send({
       from: 'Goldman and Co Applications <applications@thegoldmanfund.com>',
       to: ['submissions@thegoldmanfund.com'],
@@ -312,13 +333,16 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      console.error(`[Submit] Resend email failed:`, error);
       return NextResponse.json(
         { error: 'Failed to send email', details: error },
         { status: 500 }
       );
     }
+    console.log(`[Submit] Email sent successfully, messageId: ${data?.id}`);
 
-    // Create lead in Zoho CRM
+    // Step 7: Create lead in Zoho CRM
+    step = 'creating_zoho_lead';
     let zohoLeadId: string | undefined;
     try {
       const zohoLeadData = formatApplicationForZoho(applicationData);
@@ -350,10 +374,14 @@ export async function POST(request: NextRequest) {
       console.error('Zoho CRM integration error:', zohoError);
     }
 
+    const duration = Date.now() - startTime;
+    console.log(`[Submit] Application submitted successfully in ${duration}ms for ${applicationData.legalBusinessName}`);
     return NextResponse.json({ success: true, messageId: data?.id, zohoLeadId });
   } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[Submit] Failed at step "${step}" after ${duration}ms:`, error);
     return NextResponse.json(
-      { error: 'Failed to process application', details: error instanceof Error ? error.message : String(error) },
+      { error: 'Failed to process application', details: error instanceof Error ? error.message : String(error), step },
       { status: 500 }
     );
   }

@@ -80,10 +80,38 @@ const formatCurrency = (value: string): string => {
   }).format(parseInt(value));
 };
 
-// Format SSN for display (masked)
-const formatSSNMasked = (value: string): string => {
-  if (!value || value.length < 4) return '***-**-****';
-  return `***-**-${value.slice(-4)}`;
+// Format SSN for display (full - for underwriters)
+const formatSSN = (value: string): string => {
+  if (!value) return 'N/A';
+  // Remove any existing formatting
+  const digits = value.replace(/\D/g, '');
+  if (digits.length !== 9) return value;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 5)}-${digits.slice(5)}`;
+};
+
+// Mask email for privacy (show first 2 chars and domain)
+const maskEmail = (email: string): string => {
+  if (!email || !email.includes('@')) return '***@***.***';
+  const [localPart, domain] = email.split('@');
+  const maskedLocal = localPart.length > 2
+    ? localPart.slice(0, 2) + '*'.repeat(Math.min(localPart.length - 2, 6))
+    : '*'.repeat(localPart.length);
+  const domainParts = domain.split('.');
+  const maskedDomain = domainParts.length > 1
+    ? domainParts[0].slice(0, 1) + '*'.repeat(Math.min(domainParts[0].length - 1, 4)) + '.' + domainParts.slice(1).join('.')
+    : '*'.repeat(4) + '.com';
+  return `${maskedLocal}@${maskedDomain}`;
+};
+
+// Mask phone for privacy (show last 4 digits)
+const maskPhone = (phone: string, countryCode?: string): string => {
+  if (!phone) return '***-***-****';
+  // Remove any non-digit characters
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 4) return '***-***-****';
+  const lastFour = digits.slice(-4);
+  const prefix = countryCode ? `${countryCode} ` : '';
+  return `${prefix}***-***-${lastFour}`;
 };
 
 // Format EIN for display
@@ -377,12 +405,12 @@ export async function generateApplicationPDF(
   drawField(page, 'Title', applicationData.ownerTitle, col2X, y + 35, helvetica, helveticaBold);
 
   y = drawField(page, 'Ownership Percentage', `${applicationData.ownershipPercentage}%`, col1X, y, helvetica, helveticaBold);
-  drawField(page, 'Social Security Number', formatSSNMasked(applicationData.ownerSSN), col2X, y + 35, helvetica, helveticaBold);
+  drawField(page, 'Social Security Number', formatSSN(applicationData.ownerSSN), col2X, y + 35, helvetica, helveticaBold);
 
   y = drawField(page, 'Date of Birth', applicationData.ownerDOB, col1X, y, helvetica, helveticaBold);
-  drawField(page, 'Cell Phone', `${applicationData.ownerPhoneCountry} ${applicationData.ownerPhone}`, col2X, y + 35, helvetica, helveticaBold);
+  drawField(page, 'Cell Phone', maskPhone(applicationData.ownerPhone, applicationData.ownerPhoneCountry), col2X, y + 35, helvetica, helveticaBold);
 
-  y = drawField(page, 'Email', applicationData.ownerEmail, col1X, y, helvetica, helveticaBold);
+  y = drawField(page, 'Email', maskEmail(applicationData.ownerEmail), col1X, y, helvetica, helveticaBold);
   drawField(page, "Driver's License", `${applicationData.ownerDriversLicense} (${getStateName(applicationData.ownerDriversLicenseState)})`, col2X, y + 35, helvetica, helveticaBold);
 
   y = drawField(page, 'Home Address', applicationData.ownerHomeAddress, col1X, y, helvetica, helveticaBold, contentWidth);
@@ -399,12 +427,12 @@ export async function generateApplicationPDF(
     drawField(page, 'Title', applicationData.secondOwnerTitle || 'N/A', col2X, y + 35, helvetica, helveticaBold);
 
     y = drawField(page, 'Ownership Percentage', `${applicationData.secondOwnerOwnershipPercentage}%`, col1X, y, helvetica, helveticaBold);
-    drawField(page, 'Social Security Number', formatSSNMasked(applicationData.secondOwnerSSN || ''), col2X, y + 35, helvetica, helveticaBold);
+    drawField(page, 'Social Security Number', formatSSN(applicationData.secondOwnerSSN || ''), col2X, y + 35, helvetica, helveticaBold);
 
     y = drawField(page, 'Date of Birth', applicationData.secondOwnerDOB || 'N/A', col1X, y, helvetica, helveticaBold);
-    drawField(page, 'Cell Phone', `${applicationData.secondOwnerPhoneCountry} ${applicationData.secondOwnerPhone}`, col2X, y + 35, helvetica, helveticaBold);
+    drawField(page, 'Cell Phone', maskPhone(applicationData.secondOwnerPhone || '', applicationData.secondOwnerPhoneCountry), col2X, y + 35, helvetica, helveticaBold);
 
-    y = drawField(page, 'Email', applicationData.secondOwnerEmail || 'N/A', col1X, y, helvetica, helveticaBold);
+    y = drawField(page, 'Email', maskEmail(applicationData.secondOwnerEmail || ''), col1X, y, helvetica, helveticaBold);
     drawField(page, "Driver's License", `${applicationData.secondOwnerDriversLicense} (${getStateName(applicationData.secondOwnerDriversLicenseState || '')})`, col2X, y + 35, helvetica, helveticaBold);
 
     y = drawField(page, 'Home Address', applicationData.secondOwnerHomeAddress || 'N/A', col1X, y, helvetica, helveticaBold, contentWidth);
