@@ -299,7 +299,7 @@ export async function GET() {
 
     const { data, error } = await resendClient.emails.send({
       from: 'Goldman and Co Applications <applications@thegoldmanfund.com>',
-      to: ['reece@nunezdev.com'],
+      to: ['submissions@thegoldmanfund.com'],
       subject: `[TEST] New Funding Application - ${applicationData.legalBusinessName} - ${formatCurrency(applicationData.amountRequested)}`,
       html: emailHtml,
       attachments: allAttachments,
