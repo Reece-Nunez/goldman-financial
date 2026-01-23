@@ -381,7 +381,7 @@ export async function generateApplicationPDF(
   y = drawField(page, 'Legal Business Name', applicationData.legalBusinessName, col1X, y, helvetica, helveticaBold);
   drawField(page, 'DBA', applicationData.dba || 'N/A', col2X, y + 35, helvetica, helveticaBold);
 
-  y = drawField(page, 'Business Phone', `${applicationData.businessPhoneCountry} ${applicationData.businessPhone}`, col1X, y, helvetica, helveticaBold);
+  y = drawField(page, 'Business Phone', maskPhone(applicationData.businessPhone, applicationData.businessPhoneCountry), col1X, y, helvetica, helveticaBold);
   drawField(page, 'Business Start Date', applicationData.businessStartDate, col2X, y + 35, helvetica, helveticaBold);
 
   y = drawField(page, 'Legal Structure', getLegalStructureName(applicationData.legalStructure), col1X, y, helvetica, helveticaBold);
