@@ -6,29 +6,51 @@ import { createZohoLead, formatApplicationForZoho } from '@/app/lib/zoho';
 // Increase timeout for large file uploads (60 seconds)
 export const maxDuration = 60;
 
-// Verify reCAPTCHA token
+// Verify reCAPTCHA Enterprise token
 async function verifyRecaptcha(token: string): Promise<{ success: boolean; score?: number }> {
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+  const apiKey = process.env.RECAPTCHA_API_KEY;
+  const projectId = process.env.RECAPTCHA_PROJECT_ID;
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
 
-  if (!secretKey) {
-    console.warn('RECAPTCHA_SECRET_KEY not configured, skipping verification');
+  if (!apiKey || !projectId) {
+    console.warn('RECAPTCHA_API_KEY or RECAPTCHA_PROJECT_ID not configured, skipping verification');
     return { success: true };
   }
 
   try {
-    const response = await fetch('https://www.google.com/recaptcha/api/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `secret=${secretKey}&response=${token}`,
-    });
+    const response = await fetch(
+      `https://recaptchaenterprise.googleapis.com/v1/projects/${projectId}/assessments?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: {
+            token: token,
+            expectedAction: 'submit_application',
+            siteKey: siteKey,
+          },
+        }),
+      }
+    );
 
     const data = await response.json();
 
-    if (data.success && data.score !== undefined) {
-      return { success: data.score >= 0.5, score: data.score };
+    if (data.error) {
+      console.error('reCAPTCHA Enterprise API error:', data.error);
+      return { success: false };
     }
 
-    return { success: data.success };
+    // Enterprise returns riskAnalysis.score (0.0 to 1.0, higher = more likely human)
+    const score = data.riskAnalysis?.score;
+    const tokenValid = data.tokenProperties?.valid;
+
+    if (!tokenValid) {
+      console.warn('reCAPTCHA token invalid:', data.tokenProperties?.invalidReason);
+      return { success: false, score };
+    }
+
+    // Score of 0.5 or higher is considered legitimate
+    return { success: score >= 0.5, score };
   } catch (error) {
     console.error('reCAPTCHA verification error:', error);
     return { success: false };

@@ -18,6 +18,7 @@ export default function RecaptchaProvider({ children }: RecaptchaProviderProps) 
   return (
     <GoogleReCaptchaProvider
       reCaptchaKey={recaptchaKey}
+      useEnterprise={true}
       scriptProps={{
         async: true,
         defer: true,
