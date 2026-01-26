@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import RecaptchaProvider from "./components/RecaptchaProvider";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -197,6 +198,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.variable} ${playfair.variable} antialiased`}>
+        <GoogleAnalytics />
         <RecaptchaProvider>{children}</RecaptchaProvider>
       </body>
     </html>

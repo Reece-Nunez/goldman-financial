@@ -162,14 +162,14 @@ export default function PageLayout({ children }: PageLayoutProps) {
               <FadeIn delay={0.1}>
                 <div className="flex gap-6">
                   <motion.a
-                    href="#"
+                    href="/privacy"
                     whileHover={{ color: "#b8860b" }}
                     className="text-gray-500 text-sm transition-colors"
                   >
                     Privacy Policy
                   </motion.a>
                   <motion.a
-                    href="#"
+                    href="/terms"
                     whileHover={{ color: "#b8860b" }}
                     className="text-gray-500 text-sm transition-colors"
                   >
