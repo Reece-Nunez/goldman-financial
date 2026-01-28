@@ -570,11 +570,44 @@ export default function ApplyPage() {
     }));
   };
 
+  const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB per file
+  const MAX_TOTAL_SIZE = 5 * 1024 * 1024; // 5MB total (Lambda has ~6MB limit)
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const newFiles = Array.from(files).slice(0, 4 - bankStatements.length);
-      setBankStatements(prev => [...prev, ...newFiles].slice(0, 4));
+
+      // Calculate current total size
+      const currentTotalSize = bankStatements.reduce((sum, f) => sum + f.size, 0);
+
+      const validFiles: File[] = [];
+      const errors: string[] = [];
+
+      for (const file of newFiles) {
+        if (file.size > MAX_FILE_SIZE) {
+          errors.push(`"${file.name}" exceeds 4MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+          continue;
+        }
+
+        const newTotalSize = currentTotalSize + validFiles.reduce((sum, f) => sum + f.size, 0) + file.size;
+        if (newTotalSize > MAX_TOTAL_SIZE) {
+          errors.push(`Adding "${file.name}" would exceed the 5MB total limit. Try compressing your files or uploading fewer statements.`);
+          continue;
+        }
+
+        validFiles.push(file);
+      }
+
+      if (errors.length > 0) {
+        setSubmitError(errors.join('\n'));
+        // Clear error after 8 seconds
+        setTimeout(() => setSubmitError(''), 8000);
+      }
+
+      if (validFiles.length > 0) {
+        setBankStatements(prev => [...prev, ...validFiles].slice(0, 4));
+      }
     }
   };
 
@@ -1717,7 +1750,7 @@ export default function ApplyPage() {
                     >
                       <DocumentArrowUpIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <p className="text-gray-600 mb-2">Click to upload or drag and drop</p>
-                      <p className="text-sm text-gray-500">PDF, PNG, JPG up to 10MB each (max 4 files)</p>
+                      <p className="text-sm text-gray-500">PDF, PNG, JPG up to 4MB each (5MB total, max 4 files)</p>
                       <input
                         ref={fileInputRef}
                         type="file"

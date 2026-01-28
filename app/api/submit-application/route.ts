@@ -119,9 +119,52 @@ export async function POST(request: NextRequest) {
     const bankStatementAttachments: { filename: string; content: Buffer }[] = [];
     const bankStatementNames: string[] = [];
 
+    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB per file
+    const MAX_TOTAL_SIZE = 5 * 1024 * 1024; // 5MB total
+    let totalFileSize = 0;
+
     for (let i = 0; i < 4; i++) {
       const file = formData.get(`bankStatement${i}`) as File | null;
       if (file) {
+        // Check individual file size
+        if (file.size > MAX_FILE_SIZE) {
+          const errorMsg = `File "${file.name}" exceeds 4MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
+          Sentry.captureMessage(errorMsg, {
+            level: 'warning',
+            tags: { feature: 'file-upload', error_type: 'file_too_large' },
+            extra: {
+              fileName: file.name,
+              fileSize: file.size,
+              businessName: applicationData.legalBusinessName,
+              contactEmail: applicationData.ownerEmail,
+            },
+          });
+          return NextResponse.json(
+            { error: errorMsg },
+            { status: 400 }
+          );
+        }
+
+        totalFileSize += file.size;
+
+        // Check total size
+        if (totalFileSize > MAX_TOTAL_SIZE) {
+          const errorMsg = `Total file size exceeds 5MB limit. Please compress your files or upload fewer statements.`;
+          Sentry.captureMessage(errorMsg, {
+            level: 'warning',
+            tags: { feature: 'file-upload', error_type: 'total_size_exceeded' },
+            extra: {
+              totalSize: totalFileSize,
+              businessName: applicationData.legalBusinessName,
+              contactEmail: applicationData.ownerEmail,
+            },
+          });
+          return NextResponse.json(
+            { error: errorMsg },
+            { status: 400 }
+          );
+        }
+
         const buffer = Buffer.from(await file.arrayBuffer());
         bankStatementAttachments.push({
           filename: file.name,
@@ -130,7 +173,7 @@ export async function POST(request: NextRequest) {
         bankStatementNames.push(file.name);
       }
     }
-    console.log(`[Submit] Collected ${bankStatementAttachments.length} bank statements`);
+    console.log(`[Submit] Collected ${bankStatementAttachments.length} bank statements (${(totalFileSize / 1024 / 1024).toFixed(2)}MB total)`);
 
     // Step 5: Generate PDF
     step = 'generating_pdf';
