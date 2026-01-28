@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import * as Sentry from '@sentry/nextjs';
 import { generateApplicationPDF } from '@/app/lib/generateApplicationPDF';
 import { createZohoLead, formatApplicationForZoho } from '@/app/lib/zoho';
 
@@ -338,6 +339,18 @@ export async function POST(request: NextRequest) {
     step = 'sending_email';
     const resendClient = getResend();
     if (!resendClient) {
+      const configError = new Error('Email service not configured - RESEND_API_KEY missing');
+      Sentry.captureException(configError, {
+        tags: {
+          feature: 'email-send',
+          error_type: 'configuration',
+        },
+        extra: {
+          businessName: applicationData.legalBusinessName,
+          amountRequested: applicationData.amountRequested,
+          contactEmail: applicationData.ownerEmail,
+        },
+      });
       console.error('[Submit] Resend client not configured - RESEND_API_KEY missing');
       return NextResponse.json(
         { error: 'Email service not configured' },
@@ -355,6 +368,22 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
+      Sentry.captureException(new Error(`Email send failed: ${error.message}`), {
+        tags: {
+          feature: 'email-send',
+          error_type: 'send_failure',
+        },
+        extra: {
+          resendError: error,
+          businessName: applicationData.legalBusinessName,
+          amountRequested: applicationData.amountRequested,
+          contactEmail: applicationData.ownerEmail,
+          contactPhone: `${applicationData.ownerPhoneCountry} ${applicationData.ownerPhone}`,
+          contactName: `${applicationData.ownerFirstName} ${applicationData.ownerLastName}`,
+          attachmentCount: allAttachments.length,
+          totalAttachmentSize: allAttachments.reduce((acc, att) => acc + att.content.length, 0),
+        },
+      });
       console.error(`[Submit] Resend email failed:`, error);
       return NextResponse.json(
         { error: 'Failed to send email', details: error },
@@ -401,6 +430,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, messageId: data?.id, zohoLeadId });
   } catch (error) {
     const duration = Date.now() - startTime;
+    Sentry.captureException(error, {
+      tags: {
+        feature: 'application-submit',
+        failed_step: step,
+      },
+      extra: {
+        duration,
+        step,
+      },
+    });
     console.error(`[Submit] Failed at step "${step}" after ${duration}ms:`, error);
     return NextResponse.json(
       { error: 'Failed to process application', details: error instanceof Error ? error.message : String(error), step },
