@@ -586,13 +586,13 @@ export default function ApplyPage() {
 
       for (const file of newFiles) {
         if (file.size > MAX_FILE_SIZE) {
-          errors.push(`"${file.name}" exceeds 4MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+          errors.push(`"${file.name}" is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Please compress your PDF files.`);
           continue;
         }
 
         const newTotalSize = currentTotalSize + validFiles.reduce((sum, f) => sum + f.size, 0) + file.size;
         if (newTotalSize > MAX_TOTAL_SIZE) {
-          errors.push(`Adding "${file.name}" would exceed the 5MB total limit. Try compressing your files or uploading fewer statements.`);
+          errors.push(`Total file size is too large. Please compress your PDF files or upload fewer statements.`);
           continue;
         }
 

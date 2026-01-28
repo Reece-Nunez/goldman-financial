@@ -128,8 +128,8 @@ export async function POST(request: NextRequest) {
       if (file) {
         // Check individual file size
         if (file.size > MAX_FILE_SIZE) {
-          const errorMsg = `File "${file.name}" exceeds 4MB limit (${(file.size / 1024 / 1024).toFixed(1)}MB)`;
-          Sentry.captureMessage(errorMsg, {
+          const userMsg = `"${file.name}" is too large. Please compress your PDF files.`;
+          Sentry.captureMessage(`File too large: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`, {
             level: 'warning',
             tags: { feature: 'file-upload', error_type: 'file_too_large' },
             extra: {
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
             },
           });
           return NextResponse.json(
-            { error: errorMsg },
+            { error: userMsg },
             { status: 400 }
           );
         }
@@ -149,8 +149,8 @@ export async function POST(request: NextRequest) {
 
         // Check total size
         if (totalFileSize > MAX_TOTAL_SIZE) {
-          const errorMsg = `Total file size exceeds 5MB limit. Please compress your files or upload fewer statements.`;
-          Sentry.captureMessage(errorMsg, {
+          const userMsg = `Total file size is too large. Please compress your PDF files or upload fewer statements.`;
+          Sentry.captureMessage(`Total file size exceeded: ${(totalFileSize / 1024 / 1024).toFixed(1)}MB`, {
             level: 'warning',
             tags: { feature: 'file-upload', error_type: 'total_size_exceeded' },
             extra: {
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
             },
           });
           return NextResponse.json(
-            { error: errorMsg },
+            { error: userMsg },
             { status: 400 }
           );
         }
