@@ -209,8 +209,19 @@ export async function createZohoLead(
   leadData: ZohoLeadData,
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>,
   fundingSpecialistName?: string
-): Promise<{ success: boolean; leadId?: string; assignedTo?: string; error?: string }> {
+): Promise<{ success: boolean; leadId?: string; assignedTo?: string; error?: string; validationErrors?: string[] }> {
   try {
+    // Validate lead data before sending to Zoho
+    const validation = validateZohoLeadData(leadData);
+    if (!validation.valid) {
+      console.error('Zoho lead validation failed:', validation.errors);
+      return {
+        success: false,
+        error: `Validation failed: ${validation.errors.join(', ')}`,
+        validationErrors: validation.errors
+      };
+    }
+
     const accessToken = await getAccessToken();
 
     // Check if funding specialist name matches a rep
@@ -325,10 +336,85 @@ function parseAddress(address: string): { street: string; city: string; state: s
   return result;
 }
 
-// Format currency string to number
-function parseCurrency(value: string): number {
-  if (!value) return 0;
-  return parseInt(value.replace(/[^0-9]/g, '')) || 0;
+// Format currency string to number (returns null if invalid/empty for Zoho)
+function parseCurrency(value: string): number | null {
+  if (!value) return null;
+  const num = parseInt(value.replace(/[^0-9]/g, ''));
+  return isNaN(num) || num === 0 ? null : num;
+}
+
+// Parse EIN - must be exactly 9 digits
+function parseEIN(value: string): number | null {
+  if (!value) return null;
+  const digits = value.replace(/[^0-9]/g, '');
+  if (digits.length !== 9) return null;
+  const num = parseInt(digits);
+  return isNaN(num) ? null : num;
+}
+
+// Parse ownership percentage
+function parseOwnership(value: string): number | null {
+  if (!value) return null;
+  const num = parseFloat(value.replace(/[^0-9.]/g, ''));
+  return isNaN(num) ? null : num;
+}
+
+// Clean phone number - remove invalid characters, ensure reasonable format
+function cleanPhoneNumber(phone: string, countryCode?: string): string | null {
+  if (!phone) return null;
+  // Remove all non-digit and non-plus characters except spaces
+  const cleaned = phone.replace(/[^0-9+ -]/g, '').trim();
+  if (cleaned.length < 7) return null; // Too short to be valid
+
+  if (countryCode && countryCode.trim()) {
+    return `${countryCode.trim()} ${cleaned}`;
+  }
+  return cleaned;
+}
+
+// Format currency for display in description (handles null/empty)
+function formatCurrencyDisplay(value: string | undefined | null): string {
+  if (!value) return 'N/A';
+  const num = parseInt(value.replace(/[^0-9]/g, ''));
+  return isNaN(num) || num === 0 ? 'N/A' : `$${num.toLocaleString()}`;
+}
+
+// Validate required fields and return validation errors
+export function validateZohoLeadData(leadData: ZohoLeadData): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Check required fields
+  if (!leadData.First_Name || String(leadData.First_Name).trim() === '') {
+    errors.push('First_Name is required');
+  }
+  if (!leadData.Last_Name || String(leadData.Last_Name).trim() === '') {
+    errors.push('Last_Name is required');
+  }
+  if (!leadData.Email || String(leadData.Email).trim() === '') {
+    errors.push('Email is required');
+  }
+  if (!leadData.Company || String(leadData.Company).trim() === '') {
+    errors.push('Company is required');
+  }
+
+  // Check for NaN values in numeric fields
+  const numericFields = ['Amount_Requested', 'Monthly_Revenue', 'Annual_Revenue', 'EIN', 'Owner1_Ownership', 'Owner_2_Ownership'];
+  for (const field of numericFields) {
+    const value = leadData[field];
+    if (value !== null && value !== undefined && typeof value === 'number' && isNaN(value)) {
+      errors.push(`${field} has invalid numeric value`);
+    }
+  }
+
+  // Validate email format
+  if (leadData.Email && typeof leadData.Email === 'string') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(leadData.Email)) {
+      errors.push(`Invalid email format: ${leadData.Email}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }
 
 // Format date to YYYY-MM-DD for Zoho
@@ -414,31 +500,29 @@ export function formatApplicationForZoho(applicationData: {
   const ownerAddr = parseAddress(applicationData.ownerHomeAddress || '');
   const secondOwnerAddr = parseAddress(applicationData.secondOwnerHomeAddress || '');
 
-  // Format phone numbers
-  const ownerPhone = applicationData.ownerPhoneCountry
-    ? `${applicationData.ownerPhoneCountry} ${applicationData.ownerPhone}`
-    : applicationData.ownerPhone;
+  // Format phone numbers with validation
+  const ownerPhone = cleanPhoneNumber(applicationData.ownerPhone, applicationData.ownerPhoneCountry);
+  const businessPhone = cleanPhoneNumber(applicationData.businessPhone || '', applicationData.businessPhoneCountry);
+  const secondOwnerPhone = cleanPhoneNumber(applicationData.secondOwnerPhone || '', applicationData.secondOwnerPhoneCountry);
 
-  const businessPhone = applicationData.businessPhoneCountry
-    ? `${applicationData.businessPhoneCountry} ${applicationData.businessPhone}`
-    : applicationData.businessPhone;
-
-  const secondOwnerPhone = applicationData.secondOwnerPhoneCountry
-    ? `${applicationData.secondOwnerPhoneCountry} ${applicationData.secondOwnerPhone}`
-    : applicationData.secondOwnerPhone;
+  // Trim and validate required string fields
+  const firstName = applicationData.ownerFirstName?.trim() || '';
+  const lastName = applicationData.ownerLastName?.trim() || '';
+  const email = applicationData.ownerEmail?.trim() || '';
+  const company = applicationData.legalBusinessName?.trim() || '';
 
   // Build the lead data object
   const leadData: ZohoLeadData = {
-    // Standard Zoho fields
-    First_Name: applicationData.ownerFirstName,
-    Last_Name: applicationData.ownerLastName,
-    Email: applicationData.ownerEmail,
+    // Standard Zoho fields - required fields use trimmed values
+    First_Name: firstName || null,
+    Last_Name: lastName || null,
+    Email: email || null,
     Phone: ownerPhone,
-    Company: applicationData.legalBusinessName,
-    Website: applicationData.website || null,
+    Company: company || null,
+    Website: applicationData.website?.trim() || null,
     Industry: applicationData.industry || null,
     Lead_Source: 'Website - Funding Application',
-    Designation: applicationData.ownerTitle || null,
+    Designation: applicationData.ownerTitle?.trim() || null,
 
     // Business address
     Street: businessAddr.street || applicationData.businessAddress || null,
@@ -446,47 +530,45 @@ export function formatApplicationForZoho(applicationData: {
     State: businessAddr.state || applicationData.stateOfIncorporation || null,
     Zip_Code: businessAddr.zip || null,
 
-    // Financial fields
-    Amount_Requested: parseCurrency(applicationData.amountRequested) || null,
-    Monthly_Revenue: parseCurrency(applicationData.averageMonthlyRevenue || '') || null,
-    Annual_Revenue: parseCurrency(applicationData.grossAnnualSales || '') || null,
+    // Financial fields - use safe parsing that returns null for invalid values
+    Amount_Requested: parseCurrency(applicationData.amountRequested),
+    Monthly_Revenue: parseCurrency(applicationData.averageMonthlyRevenue || ''),
+    Annual_Revenue: parseCurrency(applicationData.grossAnnualSales || ''),
     Use_For_Funding: applicationData.useOfFunds || null,
 
-    // Business details
-    DBA: applicationData.dba || null,
-    EIN: applicationData.federalTaxId ? parseInt(applicationData.federalTaxId.replace(/[^0-9]/g, '')) || null : null,
+    // Business details - use safe EIN parsing
+    DBA: applicationData.dba?.trim() || null,
+    EIN: parseEIN(applicationData.federalTaxId || ''),
     Date_business_opened: formatDateForZoho(applicationData.businessStartDate || ''),
     Legal_Structure: applicationData.legalStructure || null,
-    Phone_2: businessPhone || null,
+    Phone_2: businessPhone,
 
     // Owner 1 details
     Owner_1_Street: ownerAddr.street || applicationData.ownerHomeAddress || null,
     Owner_1_City: ownerAddr.city || null,
     Owner_1_State: ownerAddr.state || null,
     Owner_1_Zip: ownerAddr.zip || null,
-    Owner_1_Phone: ownerPhone || null,
-    Owner_1_Email: applicationData.ownerEmail || null,
+    Owner_1_Phone: ownerPhone,
+    Owner_1_Email: email || null,
     Owner_1_SSN: applicationData.ownerSSN || null,
     Owner_1_Date_of_Birth: applicationData.ownerDOB || null,
     Owner_1_Drivers_License_Number: applicationData.ownerDriversLicense || null,
     Owner_1_DL_State_Issuance: applicationData.ownerDriversLicenseState || null,
-    Owner1_Ownership: applicationData.ownershipPercentage ? parseFloat(applicationData.ownershipPercentage) : null,
+    Owner1_Ownership: parseOwnership(applicationData.ownershipPercentage || ''),
 
     // Owner 2 details (if exists)
     Additional_owners: applicationData.hasSecondOwner === 'yes' ? 'Yes' : 'No',
-    Owner_2_First_Name: applicationData.secondOwnerFirstName || null,
-    Owner_2_Last_Name: applicationData.secondOwnerLastName || null,
+    Owner_2_First_Name: applicationData.secondOwnerFirstName?.trim() || null,
+    Owner_2_Last_Name: applicationData.secondOwnerLastName?.trim() || null,
     Owner_2_Street: secondOwnerAddr.street || applicationData.secondOwnerHomeAddress || null,
     Owner_2_City: secondOwnerAddr.city || null,
     Owner_2_State: secondOwnerAddr.state || null,
     Owner_2_Zip: secondOwnerAddr.zip || null,
-    Owner_2_Phone: secondOwnerPhone || null,
-    Owner_2_Email: applicationData.secondOwnerEmail || null,
+    Owner_2_Phone: secondOwnerPhone,
+    Owner_2_Email: applicationData.secondOwnerEmail?.trim() || null,
     Owner_2_SSN: applicationData.secondOwnerSSN || null,
     Owner_2_Date_of_Birth: applicationData.secondOwnerDOB || null,
-    Owner_2_Ownership: applicationData.secondOwnerOwnershipPercentage
-      ? parseFloat(applicationData.secondOwnerOwnershipPercentage)
-      : null,
+    Owner_2_Ownership: parseOwnership(applicationData.secondOwnerOwnershipPercentage || ''),
 
     // Loan history
     Have_any_open_loans_advances: applicationData.openLoansAdvances || null,
@@ -496,10 +578,10 @@ export function formatApplicationForZoho(applicationData: {
     // Description with additional details
     Description: [
       `Funding Specialist: ${applicationData.fundingSpecialistName || 'N/A'}`,
-      `Amount Requested: $${parseCurrency(applicationData.amountRequested || '').toLocaleString()}`,
+      `Amount Requested: ${formatCurrencyDisplay(applicationData.amountRequested)}`,
       `Use of Funds: ${applicationData.useOfFunds || 'N/A'}`,
-      `Monthly Revenue: $${parseCurrency(applicationData.averageMonthlyRevenue || '').toLocaleString()}`,
-      `Gross Annual Sales: $${parseCurrency(applicationData.grossAnnualSales || '').toLocaleString()}`,
+      `Monthly Revenue: ${formatCurrencyDisplay(applicationData.averageMonthlyRevenue)}`,
+      `Gross Annual Sales: ${formatCurrencyDisplay(applicationData.grossAnnualSales)}`,
       '',
       // Add properties if any exist
       ...(applicationData.properties && applicationData.properties.length > 0
@@ -510,9 +592,9 @@ export function formatApplicationForZoho(applicationData: {
               `  Address: ${prop.address || 'N/A'}`,
               `  Type: ${prop.propertyType || 'N/A'}`,
               `  Year Acquired: ${prop.yearAcquired || 'N/A'}`,
-              `  Purchase Price: $${parseCurrency(prop.purchasePrice || '').toLocaleString()}`,
-              `  Current Value: $${parseCurrency(prop.currentValue || '').toLocaleString()}`,
-              `  Loan Balance: $${parseCurrency(prop.loanBalance || '').toLocaleString()}`,
+              `  Purchase Price: ${formatCurrencyDisplay(prop.purchasePrice)}`,
+              `  Current Value: ${formatCurrencyDisplay(prop.currentValue)}`,
+              `  Loan Balance: ${formatCurrencyDisplay(prop.loanBalance)}`,
               `  Lender: ${prop.lender || 'N/A'}`,
               `  Title Holders: ${prop.titleHolders || 'N/A'}`,
             ].join('\n')),

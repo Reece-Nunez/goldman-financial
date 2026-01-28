@@ -461,10 +461,39 @@ export async function POST(request: NextRequest) {
         zohoLeadId = zohoResult.leadId;
         console.log('Zoho lead created:', zohoLeadId, 'Assigned to:', zohoResult.assignedTo);
       } else {
+        const isValidationError = zohoResult.validationErrors && zohoResult.validationErrors.length > 0;
+        Sentry.captureException(new Error(`Zoho lead creation failed: ${zohoResult.error}`), {
+          tags: {
+            feature: 'zoho-lead-creation',
+            error_type: isValidationError ? 'validation_failure' : 'lead_creation_failure',
+          },
+          extra: {
+            zohoError: zohoResult.error,
+            validationErrors: zohoResult.validationErrors || [],
+            applicantName: `${applicationData.ownerFirstName} ${applicationData.ownerLastName}`,
+            applicantEmail: applicationData.ownerEmail,
+            applicantPhone: `${applicationData.ownerPhoneCountry || ''} ${applicationData.ownerPhone}`.trim(),
+            businessName: applicationData.legalBusinessName,
+            amountRequested: applicationData.amountRequested,
+            fundingSpecialist: applicationData.fundingSpecialistName || 'N/A',
+            zohoLeadData: zohoLeadData,
+          },
+        });
         console.error('Failed to create Zoho lead:', zohoResult.error);
       }
     } catch (zohoError) {
-      // Log but don't fail the request if Zoho integration fails
+      Sentry.captureException(zohoError, {
+        tags: {
+          feature: 'zoho-lead-creation',
+          error_type: 'zoho_exception',
+        },
+        extra: {
+          applicantName: `${applicationData.ownerFirstName} ${applicationData.ownerLastName}`,
+          applicantEmail: applicationData.ownerEmail,
+          businessName: applicationData.legalBusinessName,
+          amountRequested: applicationData.amountRequested,
+        },
+      });
       console.error('Zoho CRM integration error:', zohoError);
     }
 
