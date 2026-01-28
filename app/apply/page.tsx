@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import * as Sentry from '@sentry/nextjs';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import SignatureCanvas from 'react-signature-canvas';
@@ -756,6 +757,8 @@ export default function ApplyPage() {
         submitData.append(`bankStatement${index}`, file);
       });
 
+      const totalFileSize = bankStatements.reduce((sum, f) => sum + f.size, 0);
+
       const response = await fetch('/api/submit-application', {
         method: 'POST',
         body: submitData,
@@ -768,8 +771,42 @@ export default function ApplyPage() {
       }
 
       setSubmitSuccess(true);
-    } catch {
-      setSubmitError('There was an error submitting your application. Please try again.');
+    } catch (error) {
+      // Determine error type for better messaging and logging
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
+      const isTimeoutError = error instanceof Error && error.message.includes('timeout');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Calculate file info for logging
+      const totalFileSize = bankStatements.reduce((sum, f) => sum + f.size, 0);
+      const fileNames = bankStatements.map(f => f.name);
+
+      // Report to Sentry with full context
+      Sentry.captureException(error, {
+        tags: {
+          feature: 'application-submit',
+          error_type: isNetworkError ? 'network_error' : isTimeoutError ? 'timeout' : 'submission_error',
+          client_side: 'true',
+        },
+        extra: {
+          businessName: formData.legalBusinessName,
+          contactEmail: formData.ownerEmail,
+          contactName: `${formData.ownerFirstName} ${formData.ownerLastName}`,
+          contactPhone: `${formData.ownerPhoneCountry} ${formData.ownerPhone}`,
+          amountRequested: formData.amountRequested,
+          bankStatementCount: bankStatements.length,
+          totalFileSize: `${(totalFileSize / 1024 / 1024).toFixed(2)}MB`,
+          fileNames,
+          errorMessage,
+        },
+      });
+
+      // Show user-friendly error message
+      if (isNetworkError || isTimeoutError) {
+        setSubmitError('Unable to submit application. Please check your internet connection and try again. If the problem persists, try compressing your PDF files.');
+      } else {
+        setSubmitError(errorMessage || 'There was an error submitting your application. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
