@@ -535,6 +535,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, messageId: data?.id, zohoLeadId });
   } catch (error) {
     const duration = Date.now() - startTime;
+    // Safely extract applicant info if available (applicationData may not be defined if parsing failed)
+    const applicantInfo = typeof applicationData !== 'undefined' ? {
+      contactName: `${applicationData.ownerFirstName || ''} ${applicationData.ownerLastName || ''}`.trim(),
+      contactEmail: applicationData.ownerEmail,
+      contactPhone: `${applicationData.ownerPhoneCountry || ''} ${applicationData.ownerPhone || ''}`.trim(),
+      businessName: applicationData.legalBusinessName,
+      amountRequested: applicationData.amountRequested,
+    } : {};
+
     Sentry.captureException(error, {
       tags: {
         feature: 'application-submit',
@@ -543,6 +552,7 @@ export async function POST(request: NextRequest) {
       extra: {
         duration,
         step,
+        ...applicantInfo,
       },
     });
     console.error(`[Submit] Failed at step "${step}" after ${duration}ms:`, error);
