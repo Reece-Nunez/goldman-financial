@@ -112,6 +112,9 @@ const formatCurrency = (value: string): string => {
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   let step = 'initializing';
+  // Declare outside try block so it's accessible in catch for error reporting
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let applicationData: any = undefined;
 
   try {
     // Step 1: Parse form data
@@ -123,7 +126,7 @@ export async function POST(request: NextRequest) {
     step = 'parsing_json_data';
     const rawApplicationData = JSON.parse(formData.get('formData') as string);
     // Sanitize all string fields to remove control characters (tabs, etc.)
-    const applicationData = sanitizeFormData(rawApplicationData);
+    applicationData = sanitizeFormData(rawApplicationData);
     const signature = formData.get('signature') as string;
     const secondSignature = formData.get('secondSignature') as string;
     const recaptchaToken = formData.get('recaptchaToken') as string;
@@ -536,7 +539,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const duration = Date.now() - startTime;
     // Safely extract applicant info if available (applicationData may not be defined if parsing failed)
-    const applicantInfo = typeof applicationData !== 'undefined' ? {
+    const applicantInfo = applicationData ? {
       contactName: `${applicationData.ownerFirstName || ''} ${applicationData.ownerLastName || ''}`.trim(),
       contactEmail: applicationData.ownerEmail,
       contactPhone: `${applicationData.ownerPhoneCountry || ''} ${applicationData.ownerPhone || ''}`.trim(),
