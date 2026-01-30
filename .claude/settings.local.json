@@ -10,7 +10,18 @@
       "Bash(git push:*)",
       "Bash(ls:*)",
       "Bash(curl:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx @sentry/wizard@latest -i nextjs --saas --org nunezdev --project javascript-nextjs)",
+      "Bash(npx tsc:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx @sentry/cli:*)",
+      "Bash(sentry-cli events get:*)",
+      "Bash(for event_id in 71741df5939a4beb9d0ab9f703ab8fac e0477112c9ad49a0a3fcde2a71ef0ea9 fc4586ca2a20406ca2472f17d6477e20 769888a9c7e84e06a52ad426bc16e405 2eb0787900284c868d3a544a58b1809d 903674c4caec4487b5043a31063b1fd9 37786cc60647471e8c1bd09b2707e166)",
+      "Bash(do)",
+      "Bash(echo:*)",
+      "Bash(done)",
+      "Bash(python3:*)",
+      "Bash(npm run lint)"
     ]
   }
 }
