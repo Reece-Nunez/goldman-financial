@@ -4,6 +4,36 @@ import * as Sentry from '@sentry/nextjs';
 import { generateApplicationPDF } from '@/app/lib/generateApplicationPDF';
 import { createZohoLead, formatApplicationForZoho } from '@/app/lib/zoho';
 
+// Sanitize string values - remove control characters, normalize whitespace
+function sanitizeString(value: string): string {
+  if (!value || typeof value !== 'string') return value;
+  return value
+    // Replace tabs with spaces
+    .replace(/\t/g, ' ')
+    // Replace newlines/carriage returns with spaces (for single-line fields)
+    .replace(/[\r\n]/g, ' ')
+    // Remove other control characters
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    // Collapse multiple spaces
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Recursively sanitize all string values in an object
+function sanitizeFormData<T>(data: T): T {
+  if (data === null || data === undefined) return data;
+  if (typeof data === 'string') return sanitizeString(data) as T;
+  if (Array.isArray(data)) return data.map(item => sanitizeFormData(item)) as T;
+  if (typeof data === 'object') {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(data)) {
+      sanitized[key] = sanitizeFormData(value);
+    }
+    return sanitized as T;
+  }
+  return data;
+}
+
 // Increase timeout for large file uploads (60 seconds)
 export const maxDuration = 60;
 
@@ -89,9 +119,11 @@ export async function POST(request: NextRequest) {
     console.log('[Submit] Starting application submission');
     const formData = await request.formData();
 
-    // Step 2: Parse JSON data
+    // Step 2: Parse JSON data and sanitize input
     step = 'parsing_json_data';
-    const applicationData = JSON.parse(formData.get('formData') as string);
+    const rawApplicationData = JSON.parse(formData.get('formData') as string);
+    // Sanitize all string fields to remove control characters (tabs, etc.)
+    const applicationData = sanitizeFormData(rawApplicationData);
     const signature = formData.get('signature') as string;
     const secondSignature = formData.get('secondSignature') as string;
     const recaptchaToken = formData.get('recaptchaToken') as string;
@@ -469,6 +501,7 @@ export async function POST(request: NextRequest) {
           },
           extra: {
             zohoError: zohoResult.error,
+            zohoRawResponse: zohoResult.rawResponse,
             validationErrors: zohoResult.validationErrors || [],
             applicantName: `${applicationData.ownerFirstName} ${applicationData.ownerLastName}`,
             applicantEmail: applicationData.ownerEmail,

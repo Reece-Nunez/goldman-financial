@@ -209,7 +209,7 @@ export async function createZohoLead(
   leadData: ZohoLeadData,
   attachments?: Array<{ filename: string; content: Buffer; contentType: string }>,
   fundingSpecialistName?: string
-): Promise<{ success: boolean; leadId?: string; assignedTo?: string; error?: string; validationErrors?: string[] }> {
+): Promise<{ success: boolean; leadId?: string; assignedTo?: string; error?: string; validationErrors?: string[]; rawResponse?: unknown }> {
   try {
     // Validate lead data before sending to Zoho
     const validation = validateZohoLeadData(leadData);
@@ -262,6 +262,9 @@ export async function createZohoLead(
 
     const result: ZohoCreateResponse = await response.json();
 
+    // Log full response for debugging
+    console.log('[Zoho] Lead creation response:', JSON.stringify(result, null, 2));
+
     if (result.data && result.data[0]?.status === 'success') {
       const leadId = result.data[0].details.id;
 
@@ -291,9 +294,18 @@ export async function createZohoLead(
       };
     }
 
+    // Build detailed error message including code and details
+    const errorData = result.data?.[0];
+    const errorMessage = [
+      errorData?.message || 'Unknown error',
+      errorData?.code ? `(code: ${errorData.code})` : '',
+      errorData?.details ? `details: ${JSON.stringify(errorData.details)}` : '',
+    ].filter(Boolean).join(' ');
+
     return {
       success: false,
-      error: result.data?.[0]?.message || 'Unknown error'
+      error: errorMessage,
+      rawResponse: result
     };
   } catch (error) {
     console.error('Error creating Zoho lead:', error);
@@ -303,6 +315,16 @@ export async function createZohoLead(
     };
   }
 }
+
+// Valid US state abbreviations
+const US_STATES = new Set([
+  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+  'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+  'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+  'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+  'DC', 'PR', 'VI', 'GU', 'AS', 'MP'
+]);
 
 // Parse address string into components (basic parsing)
 function parseAddress(address: string): { street: string; city: string; state: string; zip: string } {
@@ -326,10 +348,18 @@ function parseAddress(address: string): { street: string; city: string; state: s
     const lastPart = parts[parts.length - 1];
     const stateZipMatch = lastPart.match(/^([A-Za-z]{2,})\s*(\d{5}(?:-\d{4})?)?$/);
     if (stateZipMatch) {
-      result.state = stateZipMatch[1];
+      const potentialState = stateZipMatch[1].toUpperCase();
+      // Only set state if it's a valid US state abbreviation (not "USA", country codes, etc.)
+      if (US_STATES.has(potentialState)) {
+        result.state = potentialState;
+      }
       result.zip = stateZipMatch[2] || '';
     } else {
-      result.state = lastPart;
+      // Check if lastPart is a valid state
+      const upperLastPart = lastPart.toUpperCase();
+      if (US_STATES.has(upperLastPart)) {
+        result.state = upperLastPart;
+      }
     }
   }
 
@@ -551,7 +581,7 @@ export function formatApplicationForZoho(applicationData: {
     Owner_1_Phone: ownerPhone,
     Owner_1_Email: email || null,
     Owner_1_SSN: applicationData.ownerSSN || null,
-    Owner_1_Date_of_Birth: applicationData.ownerDOB || null,
+    Owner_1_Date_of_Birth: formatDateForZoho(applicationData.ownerDOB || ''),
     Owner_1_Drivers_License_Number: applicationData.ownerDriversLicense || null,
     Owner_1_DL_State_Issuance: applicationData.ownerDriversLicenseState || null,
     Owner1_Ownership: parseOwnership(applicationData.ownershipPercentage || ''),
@@ -567,11 +597,11 @@ export function formatApplicationForZoho(applicationData: {
     Owner_2_Phone: secondOwnerPhone,
     Owner_2_Email: applicationData.secondOwnerEmail?.trim() || null,
     Owner_2_SSN: applicationData.secondOwnerSSN || null,
-    Owner_2_Date_of_Birth: applicationData.secondOwnerDOB || null,
+    Owner_2_Date_of_Birth: formatDateForZoho(applicationData.secondOwnerDOB || ''),
     Owner_2_Ownership: parseOwnership(applicationData.secondOwnerOwnershipPercentage || ''),
 
-    // Loan history
-    Have_any_open_loans_advances: applicationData.openLoansAdvances || null,
+    // Loan history - convert to Yes/No, include amount in description
+    Have_any_open_loans_advances: applicationData.openLoansAdvances && applicationData.openLoansAdvances.trim() !== '' && applicationData.openLoansAdvances !== '0' ? 'Yes' : 'No',
     Any_Liens_defaults_bankruptcy: applicationData.hasBankruptcy === 'yes' ? 'Yes' :
                                     applicationData.hasBankruptcy === 'no' ? 'No' : null,
 
@@ -582,6 +612,7 @@ export function formatApplicationForZoho(applicationData: {
       `Use of Funds: ${applicationData.useOfFunds || 'N/A'}`,
       `Monthly Revenue: ${formatCurrencyDisplay(applicationData.averageMonthlyRevenue)}`,
       `Gross Annual Sales: ${formatCurrencyDisplay(applicationData.grossAnnualSales)}`,
+      `Open Loans/Advances: ${applicationData.openLoansAdvances ? formatCurrencyDisplay(applicationData.openLoansAdvances) : 'None'}`,
       '',
       // Add properties if any exist
       ...(applicationData.properties && applicationData.properties.length > 0

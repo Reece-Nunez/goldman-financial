@@ -2,6 +2,22 @@ import { PDFDocument, rgb, StandardFonts, PDFPage, PDFImage } from 'pdf-lib';
 import fs from 'fs';
 import path from 'path';
 
+// Sanitize text for PDF - remove/replace characters that WinAnsi encoding can't handle
+// WinAnsi can encode printable ASCII (0x20-0x7E) and some extended characters (0xA0-0xFF)
+const sanitizeForPDF = (text: string): string => {
+  if (!text) return '';
+  return text
+    // Replace tabs with spaces
+    .replace(/\t/g, ' ')
+    // Replace newlines/carriage returns with spaces
+    .replace(/[\r\n]/g, ' ')
+    // Remove other control characters (0x00-0x1F except those already handled)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+    // Replace multiple spaces with single space
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 interface ApplicationData {
   // Funding Request
   fundingSpecialistName?: string;
@@ -206,7 +222,8 @@ function drawField(
   const valueY = y - 12;
 
   // Handle long values by truncating if needed
-  let displayValue = value || 'N/A';
+  // Sanitize to remove control characters that WinAnsi can't encode
+  let displayValue = sanitizeForPDF(value) || 'N/A';
   const valueWidth = valueFont.widthOfTextAtSize(displayValue, 10);
   if (valueWidth > maxWidth) {
     while (valueFont.widthOfTextAtSize(displayValue + '...', 10) > maxWidth && displayValue.length > 0) {
@@ -505,7 +522,7 @@ export async function generateApplicationPDF(
     y -= 18;
 
     for (const name of bankStatementNames) {
-      page.drawText(`• ${name}`, {
+      page.drawText(`• ${sanitizeForPDF(name)}`, {
         x: col1X + 10,
         y,
         size: 10,
@@ -608,7 +625,7 @@ export async function generateApplicationPDF(
   }
 
   // Primary owner name and date
-  page.drawText(`${applicationData.ownerFirstName} ${applicationData.ownerLastName} - ${submissionDate}`, {
+  page.drawText(`${sanitizeForPDF(applicationData.ownerFirstName)} ${sanitizeForPDF(applicationData.ownerLastName)} - ${submissionDate}`, {
     x: col1X,
     y,
     size: 9,
@@ -668,7 +685,7 @@ export async function generateApplicationPDF(
     }
 
     // Second owner name and date
-    page.drawText(`${applicationData.secondOwnerFirstName} ${applicationData.secondOwnerLastName} - ${submissionDate}`, {
+    page.drawText(`${sanitizeForPDF(applicationData.secondOwnerFirstName || '')} ${sanitizeForPDF(applicationData.secondOwnerLastName || '')} - ${submissionDate}`, {
       x: col1X,
       y,
       size: 9,
