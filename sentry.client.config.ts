@@ -17,4 +17,23 @@ Sentry.init({
   integrations: [
     Sentry.replayIntegration(),
   ],
+
+  // Filter out errors from third-party scripts (reCAPTCHA, analytics, etc.)
+  beforeSend(event) {
+    const frames = event.exception?.values?.[0]?.stacktrace?.frames || [];
+    const isThirdPartyError = frames.some((frame) => {
+      const filename = frame.filename || '';
+      return (
+        filename.includes('recaptcha') ||
+        filename.includes('gstatic.com') ||
+        filename.includes('google.com/recaptcha')
+      );
+    });
+
+    if (isThirdPartyError) {
+      return null; // Drop the event
+    }
+
+    return event;
+  },
 });
