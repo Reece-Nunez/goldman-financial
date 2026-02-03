@@ -402,6 +402,37 @@ function cleanPhoneNumber(phone: string, countryCode?: string): string | null {
   return cleaned;
 }
 
+// Clean and validate website URL - Zoho requires valid URL format
+function cleanWebsiteUrl(website: string | undefined): string | null {
+  if (!website || !website.trim()) return null;
+
+  let url = website.trim().toLowerCase();
+
+  // Remove common invalid entries
+  if (url === 'n/a' || url === 'na' || url === 'none' || url === '-') {
+    return null;
+  }
+
+  // If it doesn't start with a protocol, add https://
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+
+  // Basic validation - must have a domain with at least one dot
+  // This catches entries like "test" or "none" that slipped through
+  try {
+    const parsed = new URL(url);
+    // Check that hostname has at least one dot (e.g., example.com)
+    if (!parsed.hostname.includes('.')) {
+      return null;
+    }
+    return url;
+  } catch {
+    // Invalid URL format
+    return null;
+  }
+}
+
 // Format currency for display in description (handles null/empty)
 function formatCurrencyDisplay(value: string | undefined | null): string {
   if (!value) return 'N/A';
@@ -549,7 +580,7 @@ export function formatApplicationForZoho(applicationData: {
     Email: email || null,
     Phone: ownerPhone,
     Company: company || null,
-    Website: applicationData.website?.trim() || null,
+    Website: cleanWebsiteUrl(applicationData.website),
     Industry: applicationData.industry || null,
     Lead_Source: 'Website - Funding Application',
     Designation: applicationData.ownerTitle?.trim() || null,
