@@ -642,6 +642,27 @@ export default function ApplyPage() {
         if (!formData.stateOfIncorporation) errors.push('State of incorporation is required');
         if (!formData.federalTaxId) errors.push('Federal Tax ID is required');
         if (!formData.industry) errors.push('Industry is required');
+        // Website is optional, but validate format if provided
+        if (formData.website && formData.website.trim()) {
+          const websiteValue = formData.website.trim().toLowerCase();
+          // Check for obviously invalid entries
+          if (websiteValue === 'n/a' || websiteValue === 'na' || websiteValue === 'none' || websiteValue === '-') {
+            // Clear it out - these are acceptable "no website" values
+          } else {
+            // Add protocol if missing for validation
+            const urlToValidate = websiteValue.startsWith('http://') || websiteValue.startsWith('https://')
+              ? websiteValue
+              : 'https://' + websiteValue;
+            try {
+              const parsed = new URL(urlToValidate);
+              if (!parsed.hostname.includes('.')) {
+                errors.push('Website must be a valid URL (e.g., https://www.example.com)');
+              }
+            } catch {
+              errors.push('Website must be a valid URL (e.g., https://www.example.com)');
+            }
+          }
+        }
         break;
       case 3:
         if (!formData.ownerFirstName) errors.push('First name is required');
@@ -1153,12 +1174,15 @@ export default function ApplyPage() {
                           Company Website
                         </label>
                         <input
-                          type="url"
+                          type="text"
                           value={formData.website}
                           onChange={(e) => handleInputChange('website', e.target.value)}
                           className={inputClass}
                           placeholder="https://www.example.com"
                         />
+                        <p className="mt-1 text-xs text-slate-500">
+                          Leave blank if none, or enter full URL (e.g., https://yoursite.com)
+                        </p>
                       </div>
                     </div>
                   </div>
