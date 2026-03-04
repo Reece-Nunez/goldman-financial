@@ -93,7 +93,7 @@ async function getNextRoundRobinRep(accessToken: string): Promise<{ id: string; 
   try {
     // Query for the most recent lead from website applications
     const searchParams = new URLSearchParams({
-      criteria: '(Lead_Source:equals:Website - Funding Application)',
+      criteria: '(Lead_Source:equals:GoldmanFund Website - Funding Application)',
       sort_by: 'Created_Time',
       sort_order: 'desc',
       per_page: '1',
@@ -582,7 +582,7 @@ export function formatApplicationForZoho(applicationData: {
     Company: company || null,
     Website: cleanWebsiteUrl(applicationData.website),
     Industry: applicationData.industry || null,
-    Lead_Source: 'Website - Funding Application',
+    Lead_Source: 'GoldmanFund Website - Funding Application',
     Designation: applicationData.ownerTitle?.trim() || null,
 
     // Business address

@@ -440,7 +440,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await resendClient.emails.send({
       from: 'Goldman and Co Applications <applications@thegoldmanfund.com>',
       to: ['submissions@thegoldmanfund.com'],
-      subject: `New Funding Application - ${applicationData.legalBusinessName} - ${formatCurrency(applicationData.amountRequested)}`,
+      subject: `[GoldmanFund] New Funding Application - ${applicationData.legalBusinessName} - ${formatCurrency(applicationData.amountRequested)}`,
       html: emailHtml,
       attachments: allAttachments,
     });
