@@ -18,6 +18,16 @@ Sentry.init({
     Sentry.replayIntegration(),
   ],
 
+  // Early-stage filtering: drop known noise before events are constructed
+  ignoreErrors: [
+    /Non-Error promise rejection captured with value/,
+    /Event `CustomEvent`/,
+    /runtime\.sendMessage/,
+    /Tab not found/,
+    /feature named .* was not found/,
+    /recaptcha/i,
+  ],
+
   // Filter out errors from third-party scripts and browser/extension noise
   beforeSend(event) {
     const errorValue = event.exception?.values?.[0]?.value || '';
