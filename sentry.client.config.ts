@@ -21,9 +21,20 @@ Sentry.init({
   // Filter out errors from third-party scripts and browser/extension noise
   beforeSend(event) {
     const errorValue = event.exception?.values?.[0]?.value || '';
+    const errorType = event.exception?.values?.[0]?.type || '';
 
     // Filter non-Error promise rejections from reCAPTCHA, browser extensions, etc.
     if (errorValue.startsWith('Non-Error promise rejection captured with value:')) {
+      return null;
+    }
+
+    // Filter CustomEvent promise rejections (Safari/browser extension noise)
+    if (errorType === 'CustomEvent' || errorValue.includes('CustomEvent')) {
+      return null;
+    }
+
+    // Filter browser extension errors (runtime.sendMessage, etc.)
+    if (errorValue.includes('runtime.sendMessage') || errorValue.includes('Tab not found')) {
       return null;
     }
 

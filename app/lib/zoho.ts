@@ -237,13 +237,13 @@ export async function createZohoLead(
       console.log(`No rep match for "${fundingSpecialistName || 'N/A'}". Using round-robin: ${assignedRep.name} (${assignedRep.id})`);
     }
 
-    // Add the owner to the lead data
+    // Add the owner to the lead data (Zoho v2 API requires object format)
     const leadWithOwner = {
       ...leadData,
-      Owner: assignedRep.id,
+      Owner: { id: assignedRep.id },
     };
 
-    const response = await fetch('https://www.zohoapis.com/crm/v2/Leads', {
+    let response = await fetch('https://www.zohoapis.com/crm/v2/Leads', {
       method: 'POST',
       headers: {
         'Authorization': `Zoho-oauthtoken ${accessToken}`,
@@ -260,10 +260,37 @@ export async function createZohoLead(
       return { success: false, error: `API error: ${response.status}` };
     }
 
-    const result: ZohoCreateResponse = await response.json();
+    let result: ZohoCreateResponse = await response.json();
 
     // Log full response for debugging
     console.log('[Zoho] Lead creation response:', JSON.stringify(result, null, 2));
+
+    // If Owner is invalid (deactivated user), retry without Owner to use Zoho default
+    if (result.data?.[0]?.status === 'error' && result.data[0]?.code === 'INVALID_DATA' &&
+        result.data[0]?.details && 'api_name' in result.data[0].details && result.data[0].details.api_name === 'Owner') {
+      console.warn(`[Zoho] Owner ${assignedRep.name} (${assignedRep.id}) is invalid, retrying without owner assignment`);
+
+      response = await fetch('https://www.zohoapis.com/crm/v2/Leads', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Zoho-oauthtoken ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: [leadData],
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('Zoho CRM API error (retry without owner):', error);
+        return { success: false, error: `API error: ${response.status}` };
+      }
+
+      result = await response.json();
+      console.log('[Zoho] Lead creation response (retry without owner):', JSON.stringify(result, null, 2));
+      assignedRep = { id: '', name: 'Zoho Default' };
+    }
 
     if (result.data && result.data[0]?.status === 'success') {
       const leadId = result.data[0].details.id;
