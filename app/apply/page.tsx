@@ -785,10 +785,20 @@ export default function ApplyPage() {
         body: submitData,
       });
 
-      const responseData = await response.json();
-
       if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to submit application');
+        // Handle 413 (Request Entity Too Large) from Vercel's body size limit
+        if (response.status === 413) {
+          throw new Error('Your files are too large to upload. Please compress your PDF files or upload fewer bank statements.');
+        }
+
+        let errorMessage = 'Failed to submit application';
+        try {
+          const responseData = await response.json();
+          errorMessage = responseData.error || errorMessage;
+        } catch {
+          // Response wasn't JSON (e.g., plain text error from proxy/CDN)
+        }
+        throw new Error(errorMessage);
       }
 
       setSubmitSuccess(true);

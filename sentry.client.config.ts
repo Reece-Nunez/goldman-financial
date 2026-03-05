@@ -18,8 +18,21 @@ Sentry.init({
     Sentry.replayIntegration(),
   ],
 
-  // Filter out errors from third-party scripts (reCAPTCHA, analytics, etc.)
+  // Filter out errors from third-party scripts and browser/extension noise
   beforeSend(event) {
+    const errorValue = event.exception?.values?.[0]?.value || '';
+
+    // Filter non-Error promise rejections from reCAPTCHA, browser extensions, etc.
+    if (errorValue.startsWith('Non-Error promise rejection captured with value:')) {
+      return null;
+    }
+
+    // Filter DuckDuckGo browser internal errors
+    if (errorValue.includes('feature named') && errorValue.includes('was not found')) {
+      return null;
+    }
+
+    // Filter errors originating from third-party scripts (reCAPTCHA, analytics, etc.)
     const frames = event.exception?.values?.[0]?.stacktrace?.frames || [];
     const isThirdPartyError = frames.some((frame) => {
       const filename = frame.filename || '';
@@ -31,7 +44,7 @@ Sentry.init({
     });
 
     if (isThirdPartyError) {
-      return null; // Drop the event
+      return null;
     }
 
     return event;
