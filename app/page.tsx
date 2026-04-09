@@ -493,7 +493,7 @@ export default function Home() {
               <div className="space-y-6">
                 {[
                   { icon: PhoneIcon, title: "Phone", content: "+1 (800) 697-1887", href: "tel:+18006971887" },
-                  { icon: EnvelopeIcon, title: "Email", content: "info@goldmanandco.com", href: "mailto:info@goldmanandco.com" },
+                  { icon: EnvelopeIcon, title: "Email", content: "info@thegoldmanfund.com", href: "mailto:info@thegoldmanfund.com" },
                 ].map((item, index) => (
                   <motion.div
                     key={item.title}

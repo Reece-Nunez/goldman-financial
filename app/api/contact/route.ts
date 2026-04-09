@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     //
     // await resend.emails.send({
     //   from: 'Goldman and Co <noreply@yourdomain.com>',
-    //   to: ['contact@goldmanandco.com'],
+    //   to: ['info@thegoldmanfund.com'],
     //   replyTo: email,
     //   subject: `New Contact Form Submission from ${firstName} ${lastName}`,
     //   html: `

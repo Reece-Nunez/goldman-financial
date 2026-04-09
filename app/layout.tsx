@@ -103,7 +103,7 @@ const jsonLd = {
   logo: "https://goldmanandco.com/Final Files-01.png",
   image: "https://goldmanandco.com/og-image.jpg",
   telephone: "+1-800-697-1887",
-  email: "info@goldmanandco.com",
+  email: "info@thegoldmanfund.com",
   address: [
     {
       "@type": "PostalAddress",
@@ -145,7 +145,7 @@ const organizationJsonLd = {
     "@type": "ContactPoint",
     telephone: "+1-800-697-1887",
     contactType: "customer service",
-    email: "info@goldmanandco.com",
+    email: "info@thegoldmanfund.com",
     availableLanguage: "English",
   },
   location: [
